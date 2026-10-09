@@ -356,3 +356,18 @@ struct CelebrationToastTimerTests {
         #expect(toast.text == nil)
     }
 }
+
+/// Regression tests for sample-data seeding (9ab0945): a failed count must not count as empty.
+@MainActor
+struct SeedDecisionTests {
+    private struct CountFailed: Error {}
+
+    @Test func seedsOnlyWhenTheStoreIsKnownToBeEmpty() {
+        #expect(SampleData.shouldSeedEmptyStore(courseCount: { 0 }))
+        #expect(!SampleData.shouldSeedEmptyStore(courseCount: { 3 }))
+    }
+
+    @Test func doesNotSeedWhenTheCountCannotBeRead() {
+        #expect(!SampleData.shouldSeedEmptyStore(courseCount: { throw CountFailed() }))
+    }
+}
