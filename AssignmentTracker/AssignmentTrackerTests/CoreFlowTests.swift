@@ -321,3 +321,38 @@ struct CoreFlowTests {
         #expect(hero.dueToday == 1)
     }
 }
+
+/// Regression tests for the celebration toast (bd21351): a replaced toast's timer must not clear
+/// the newer one.
+@MainActor
+struct CelebrationToastTimerTests {
+    /// Stands in for RootView's `celebration` state.
+    final class Toast {
+        var text: String?
+    }
+
+    @Test func clearsAfterTheDelay() async {
+        let toast = Toast()
+        toast.text = "first"
+        await clearAfterDelay(.milliseconds(10)) { toast.text = nil }
+        #expect(toast.text == nil)
+    }
+
+    @Test func replacedToastIsNotClearedByItsCancelledTimer() async {
+        let toast = Toast()
+        toast.text = "first"
+        let firstTimer = Task { await clearAfterDelay(.milliseconds(200)) { toast.text = nil } }
+
+        // A second celebration arrives within the delay: SwiftUI cancels the first timer and starts
+        // a new one.
+        toast.text = "second"
+        firstTimer.cancel()
+        let secondTimer = Task { await clearAfterDelay(.milliseconds(200)) { toast.text = nil } }
+
+        await firstTimer.value
+        #expect(toast.text == "second")
+
+        await secondTimer.value
+        #expect(toast.text == nil)
+    }
+}

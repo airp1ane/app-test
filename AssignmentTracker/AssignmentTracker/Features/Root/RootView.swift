@@ -83,12 +83,20 @@ struct RootView: View {
         }
         .task(id: celebration) {
             guard celebration != nil else { return }
-            try? await Task.sleep(for: .seconds(3))
-            // A newer celebration (or a tap) cancels this task; don't clear the toast that replaced it.
-            guard !Task.isCancelled else { return }
-            withAnimation(.snappy) { celebration = nil }
+            await clearAfterDelay(.seconds(3)) {
+                withAnimation(.snappy) { celebration = nil }
+            }
         }
     }
+}
+
+/// Waits for `delay`, then runs `clear`. A newer celebration (or a tap) cancels the task, and a
+/// cancelled wait must not clear the toast that replaced it.
+@MainActor
+func clearAfterDelay(_ delay: Duration, clear: () -> Void) async {
+    try? await Task.sleep(for: delay)
+    guard !Task.isCancelled else { return }
+    clear()
 }
 
 extension EnvironmentValues {
