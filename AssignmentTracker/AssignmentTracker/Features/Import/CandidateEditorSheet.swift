@@ -80,7 +80,7 @@ struct CandidateEditorSheet: View {
                             RowLabel("Weight", icon: .badge)
                             TextField("e.g. 15%", text: Binding(
                                 get: { draft.weight ?? "" },
-                                set: { draft.weight = $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0 }
+                                set: { draft.weight = CandidateText.isBlank($0) ? nil : $0 }
                             ))
                             .multilineTextAlignment(.trailing)
                         }
@@ -128,7 +128,7 @@ struct CandidateEditorSheet: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(role: .cancel) {
                         // A brand-new, untouched item is discarded rather than left blank.
-                        if original.title.isEmpty, draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { onDelete() }
+                        if original.title.isEmpty, CandidateText.isBlank(draft.title) { onDelete() }
                         dismiss()
                     } label: {
                         Label("Cancel", appIcon: .close)
@@ -136,7 +136,7 @@ struct CandidateEditorSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(role: .confirm, action: save) { Label("Done", appIcon: .check) }
-                        .disabled(draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .disabled(CandidateText.isBlank(draft.title))
                 }
             }
         }
@@ -188,5 +188,13 @@ struct CandidateEditorSheet: View {
         let calendar = Calendar.current
         let tomorrow = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: .now))!
         return calendar.date(bySettingHour: 23, minute: 59, second: 0, of: tomorrow)!
+    }
+}
+
+/// Text rules shared by the editor's Done, Cancel and weight checks.
+nonisolated enum CandidateText {
+    /// Empty once spaces and line breaks are ignored, so a pasted newline-only title is blank too.
+    static func isBlank(_ text: String) -> Bool {
+        text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 }
