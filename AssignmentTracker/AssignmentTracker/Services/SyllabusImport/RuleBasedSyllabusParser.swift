@@ -6,6 +6,8 @@ nonisolated struct DetectedItem: Equatable, Sendable {
     var kind: AssignmentKind
     /// The date as written ("Oct 12", "Week 3, Friday"), or nil when none was found.
     var dateText: String?
+    /// False when the on-device model gave a date the syllabus text doesn't back up.
+    var dateFoundInSource = true
     var weight: String?
     var notes: String = ""
 }

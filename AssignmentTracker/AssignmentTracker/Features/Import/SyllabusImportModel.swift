@@ -227,6 +227,9 @@ final class SyllabusImportModel {
         if !fingerprint.isEmpty, !course.importedSyllabusFingerprints.contains(fingerprint) {
             course.importedSyllabusFingerprints.append(fingerprint)
         }
+        // A whole import is too much to leave to autosave's timing. If this fails, the
+        // changes stay in the context and autosave tries again.
+        try? context.save()
         if remindDayBefore, !created.isEmpty {
             Task {
                 await ReminderScheduler.requestAuthorization()

@@ -12,6 +12,8 @@ nonisolated struct ImportCandidate: Identifiable, Equatable, Sendable {
     var dateStatus: ResolvedDate.Status
     /// Once the person picks a date themselves, changing the semester start leaves it alone.
     var dateSetByUser = false
+    /// False when the syllabus doesn't back up the detected date, so it's flagged for review.
+    var dateFoundInSource = true
     var weight: String?
     var notes: String
     var isIncluded: Bool
@@ -77,6 +79,7 @@ nonisolated enum ImportCandidateBuilder {
     ) -> [ImportCandidate] {
         items.map { item in
             var candidate = ImportCandidate(title: item.title, kind: item.kind, dateText: item.dateText, weight: item.weight, notes: item.notes)
+            candidate.dateFoundInSource = item.dateFoundInSource
             resolve(&candidate, with: resolver)
             candidate.duplicateOf = duplicate(of: candidate, in: existing, calendar: resolver.calendar)?.title
             candidate.isIncluded = defaultInclusion(for: candidate)
@@ -105,6 +108,13 @@ nonisolated enum ImportCandidateBuilder {
         let resolved = resolver.resolve(text)
         candidate.dueDate = resolved.date
         candidate.dateStatus = resolved.status
+        guard !candidate.dateFoundInSource else { return }
+        let unverified = "Date not found as written in the syllabus"
+        switch resolved.status {
+        case .confident: candidate.dateStatus = .needsReview(unverified)
+        case .needsReview(let reason): candidate.dateStatus = .needsReview("\(reason) · \(unverified)")
+        case .missing: break
+        }
     }
 
     static func defaultInclusion(for candidate: ImportCandidate) -> Bool {

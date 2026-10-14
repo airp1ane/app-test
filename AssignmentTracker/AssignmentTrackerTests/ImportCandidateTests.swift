@@ -105,6 +105,60 @@ struct FoundationModelParserHelpersTests {
         #expect(FoundationModelSyllabusParser.detectedItem(from: invented, source: source) == nil)
     }
 
+    @Test func keepsShortTitlesThatAppearInTheSource() {
+        let source = "Sep 8: PS 3 due\nSep 10: HW 1"
+        let short = GeneratedItem(title: "PS 3", kind: .assignment, dateText: "Sep 8", weight: "", details: "")
+        let invented = GeneratedItem(title: "PS 4", kind: .assignment, dateText: "Sep 8", weight: "", details: "")
+        #expect(FoundationModelSyllabusParser.detectedItem(from: short, source: source)?.title == "PS 3")
+        #expect(FoundationModelSyllabusParser.detectedItem(from: invented, source: source) == nil)
+    }
+
+    @Test func titleWordsMustBeWholeWords() {
+        let item = GeneratedItem(title: "Lab Report", kind: .assignment, dateText: "", weight: "", details: "")
+        #expect(FoundationModelSyllabusParser.detectedItem(from: item, source: "Course syllabus overview") == nil)
+    }
+
+    @Test(arguments: [
+        ("Oct 14", true),
+        ("October 14th at 5 PM", false), // no time in the source
+        ("Week 3, Friday", true),        // parts on different lines
+        ("Oct 21", false),               // invented day
+        ("Monday, Oct 14", false),       // "monitor" isn't Monday
+    ])
+    func checksModelDatesAgainstTheSource(dateText: String, backed: Bool) {
+        let source = "Week 3\nFri: Quiz 1\nOct 14: Essay 1 due. Monitor the forum."
+        #expect(FoundationModelSyllabusParser.sourceBacks(dateText: dateText, in: source) == backed)
+    }
+
+    @Test func unbackedModelDateNeedsReview() throws {
+        let item = GeneratedItem(title: "Essay 1", kind: .assignment, dateText: "Oct 21", weight: "", details: "")
+        let detected = try #require(FoundationModelSyllabusParser.detectedItem(from: item, source: "Oct 14: Essay 1 due"))
+        #expect(!detected.dateFoundInSource)
+
+        let resolver = SyllabusDateResolver(calendar: Fixtures.calendar, referenceDate: Fixtures.today)
+        let candidate = ImportCandidateBuilder.candidates(from: [detected], resolver: resolver, existing: [])[0]
+        #expect(candidate.dateStatus == .needsReview("Date not found as written in the syllabus"))
+    }
+
+    @Test func chunksRepeatTheCurrentDateHeading() {
+        let filler = String(repeating: "Lecture notes and discussion. ", count: 20)
+        let text = (1...12).map { "Friday, October \($0 + 1)\n\(filler)\n- Quiz \($0)" }.joined(separator: "\n")
+        let chunks = FoundationModelSyllabusParser.chunks(of: text)
+
+        #expect(chunks.count > 1)
+        for chunk in chunks.dropFirst() {
+            #expect(chunk.hasPrefix("Friday, October "), "chunk should start with its date heading")
+        }
+    }
+
+    @Test func splitsLinesLongerThanAChunk() {
+        let paragraph = String(repeating: "Read the chapter and take notes. ", count: 200)
+        let chunks = FoundationModelSyllabusParser.chunks(of: paragraph + "\nProblem Set 1 due Sep 8")
+        #expect(chunks.count > 1)
+        #expect(chunks.allSatisfy { $0.count <= FoundationModelSyllabusParser.chunkSize + 1 })
+        #expect(chunks.joined().contains("Problem Set 1 due Sep 8"))
+    }
+
     @Test func normalizesModelWeights() {
         let item = GeneratedItem(title: "Essay 1", kind: .assignment, dateText: "", weight: "15 percent (15%)", details: "")
         let detected = FoundationModelSyllabusParser.detectedItem(from: item, source: "Essay 1 15%")
@@ -121,6 +175,12 @@ struct DetectionMergeTests {
         #expect(merged.count == 1)
         #expect(merged[0].dateText == "Week 3, Fri")
         #expect(merged[0].notes == "From syllabus: Fri: Problem Set 1 due")
+    }
+
+    @Test func rulesDateClearsTheUnverifiedFlag() {
+        let model = [DetectedItem(title: "Problem Set 1", kind: .assignment, dateText: "Week 2, Fri", dateFoundInSource: false)]
+        let rules = [DetectedItem(title: "Problem Set 1", kind: .assignment, dateText: "Week 3, Fri")]
+        #expect(SyllabusAnalyzer.merge(model: model, rules: rules)[0].dateFoundInSource)
     }
 
     @Test func rulesKindWinsWhenMoreSpecific() {

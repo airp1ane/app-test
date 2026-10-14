@@ -89,7 +89,10 @@ nonisolated struct SyllabusAnalyzer {
             }) {
                 matchedRules.insert(index)
                 let rule = rules[index]
-                if let date = rule.dateText { item.dateText = date }
+                if let date = rule.dateText {
+                    item.dateText = date
+                    item.dateFoundInSource = true
+                }
                 // A keyword match ("Reading Check" → quiz) is more specific than the model's
                 // tendency to call everything an assignment.
                 if rule.kind != .assignment { item.kind = rule.kind }
