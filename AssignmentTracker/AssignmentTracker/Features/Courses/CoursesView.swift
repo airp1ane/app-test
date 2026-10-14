@@ -21,7 +21,7 @@ struct CoursesView: View {
 
     private func subtitle(for summaries: [(course: Course, summary: CourseSummary)], unassigned: [Assignment]) -> String {
         // Open work in every course, plus open work with no course yet.
-        let toDo = summaries.reduce(0) { $0 + $1.summary.openCount } + unassigned.filter { !$0.isCompleted }.count
+        let toDo = summaries.reduce(0) { $0 + $1.summary.openCount } + unassigned.count { !$0.isCompleted }
         let courseWord = courses.count == 1 ? "course" : "courses"
         return "\(courses.count) \(courseWord) · \(toDo) to do"
     }
@@ -46,7 +46,7 @@ struct CoursesView: View {
                         emptyState
                     } else {
                         GlassGroup {
-                            ForEach(Array(summaries.enumerated()), id: \.element.course.id) { index, item in
+                            ForEach(summaries.enumerated(), id: \.element.course.id) { index, item in
                                 if index > 0 { InsetDivider() }
                                 Button { editing = item.course } label: {
                                     CourseRow(course: item.course, summary: item.summary)
@@ -142,7 +142,7 @@ private struct CourseRow: View {
         switch summary.state {
         case .open(let count):
             Text("\(count)")
-                .font(.subheadline.weight(.bold))
+                .font(.subheadline.bold())
                 .foregroundStyle(Palette.onAccent)
                 .padding(.horizontal, 9)
                 .frame(minWidth: 28, minHeight: 28)

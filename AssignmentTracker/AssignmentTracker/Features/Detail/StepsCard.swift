@@ -12,7 +12,7 @@ struct StepsCard: View {
     var body: some View {
         // Sorted once per render rather than on every access.
         let steps = assignment.sortedSteps
-        let done = steps.filter(\.isDone).count
+        let done = steps.count(where: \.isDone)
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .firstTextBaseline) {

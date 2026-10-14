@@ -19,7 +19,7 @@ struct StreakInfoSheet: View {
                     Text("Finish work before its due time to grow your streak. Work added after it was due doesn’t count either way.")
                         .font(.body)
                     GlassGroup {
-                        ForEach(Array(Self.rules.enumerated()), id: \.offset) { index, rule in
+                        ForEach(Self.rules.enumerated(), id: \.offset) { index, rule in
                             if index > 0 { InsetDivider(leading: 52) }
                             HStack(alignment: .top, spacing: 14) {
                                 AppIcon(rule.icon, size: 22)

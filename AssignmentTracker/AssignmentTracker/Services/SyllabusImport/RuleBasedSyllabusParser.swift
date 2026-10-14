@@ -122,7 +122,7 @@ nonisolated struct RuleBasedSyllabusParser {
     private func normalizedLines(_ text: String) -> [String] {
         text.components(separatedBy: .newlines)
             .map { line in
-                line.replacingOccurrences(of: "\t", with: " | ")
+                line.replacing("\t", with: " | ")
                     .replacingOccurrences(of: #" {3,}"#, with: " | ", options: .regularExpression)
                     .trimmingCharacters(in: .whitespaces)
             }
@@ -261,7 +261,7 @@ nonisolated struct RuleBasedSyllabusParser {
             .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
             .trimmingCharacters(in: CharacterSet(charactersIn: " :-–—,.;()[]|•*·"))
         // Trimming can take a closing parenthesis the title still needs: "Exam 2 (Chapters 7–11)".
-        if working.filter({ $0 == "(" }).count > working.filter({ $0 == ")" }).count { working += ")" }
+        if working.count { $0 == "(" } > working.count { $0 == ")" } { working += ")" }
         guard let first = working.first else { return "" }
         return first.uppercased() + working.dropFirst()
     }

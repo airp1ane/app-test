@@ -107,7 +107,7 @@ struct AssignmentGroup: View {
 
     var body: some View {
         GlassGroup {
-            ForEach(Array(assignments.enumerated()), id: \.element.id) { index, assignment in
+            ForEach(assignments.enumerated(), id: \.element.id) { index, assignment in
                 if index > 0 { InsetDivider(leading: 54) }
                 AssignmentRow(assignment: assignment, tag: tag(assignment))
             }

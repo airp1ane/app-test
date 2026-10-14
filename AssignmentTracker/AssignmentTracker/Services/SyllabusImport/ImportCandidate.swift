@@ -48,8 +48,14 @@ nonisolated struct ImportCandidate: Identifiable, Equatable, Sendable {
         return dueDate < calendar.startOfDay(for: now)
     }
 
+    /// The weight as editable text: empty when there's none, and blank input clears it.
+    var weightText: String {
+        get { weight ?? "" }
+        set { weight = CandidateText.isBlank(newValue) ? nil : newValue }
+    }
+
     var suggestedPriority: Priority {
-        let percent = weight.flatMap { Double($0.replacingOccurrences(of: "%", with: "")) }
+        let percent = weight.flatMap { Double($0.replacing("%", with: "")) }
         if kind == .exam || (percent ?? 0) >= 20 { return .high }
         if kind == .reading { return .low }
         return .medium

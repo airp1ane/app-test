@@ -28,6 +28,11 @@ struct StreaksView: View {
             .background { DuskBackground() }
             .toolbarVisibility(.hidden, for: .navigationBar)
             .sheet(isPresented: $isShowingInfo) { StreakInfoSheet() }
+            .navigationDestination(for: StreaksRoute.self) { route in
+                switch route {
+                case .badges: BadgesView(stats: stats)
+                }
+            }
         }
     }
 }
@@ -99,7 +104,7 @@ private struct Stat: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(value)
-                .font(.title3.weight(.bold))
+                .font(.title3.bold())
                 .contentTransition(.numericText())
             Text(label)
                 .font(.footnote)
@@ -197,16 +202,14 @@ private struct BadgesSummary: View {
     let stats: HabitStats
 
     var body: some View {
-        let earned = stats.badges.filter(\.isUnlocked).count
+        let earned = stats.badges.count(where: \.isUnlocked)
         let recent = stats.mostRecentEarned
         let next = stats.nextToEarn
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline) {
                 SectionHeader("Badges")
                 Spacer()
-                NavigationLink {
-                    BadgesView(stats: stats)
-                } label: {
+                NavigationLink(value: StreaksRoute.badges) {
                     Text("\(earned) of \(stats.badges.count) · See all")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Palette.accentText)

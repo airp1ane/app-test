@@ -149,8 +149,8 @@ struct SyllabusEndToEndTests {
             "Lab participation form (SONA credits, part 1)", "Poster draft for peer review",
             "Extra credit article summary", "Final research paper", "Cumulative final exam",
         ])
-        #expect(result.items.filter { $0.kind == .exam }.count == 3)
-        #expect(result.items.filter { $0.kind == .quiz }.count == 2)
+        #expect(result.items.count { $0.kind == .exam } == 3)
+        #expect(result.items.count { $0.kind == .quiz } == 2)
         #expect(!result.items.contains { $0.kind == .reading }, "chapter citations in topics aren't readings")
 
         let resolver = SyllabusDateResolver(calendar: Fixtures.calendar, termStart: result.termStart, referenceDate: Fixtures.today)

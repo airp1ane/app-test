@@ -100,7 +100,7 @@ struct MonthGridCard: View {
         VStack(spacing: 12) {
             HStack {
                 Text(month.formatted(.dateTime.month(.wide).year()))
-                    .font(.title3.weight(.bold))
+                    .font(.title3.bold())
                     .contentTransition(.numericText())
                 Spacer()
                 Button { step(-1) } label: { AppIcon(.back, size: 20).frame(width: 44, height: 44).contentShape(.rect) }
@@ -113,7 +113,7 @@ struct MonthGridCard: View {
 
             VStack(spacing: 2) {
                 HStack(spacing: 2) {
-                    ForEach(Array(weekdaySymbols.enumerated()), id: \.offset) { _, symbol in
+                    ForEach(weekdaySymbols.enumerated(), id: \.offset) { _, symbol in
                         Text(symbol)
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(Palette.secondaryText)
@@ -356,7 +356,7 @@ private struct DayCell: View {
 
     private var accessibilityValue: String {
         var parts: [String] = []
-        let open = due.filter { !$0.isCompleted }.count
+        let open = due.count { !$0.isCompleted }
         if open > 0 { parts.append("\(open) due") }
         if hasPlanned { parts.append("work planned") }
         return parts.joined(separator: ", ")
@@ -392,7 +392,7 @@ private struct DayAgenda: View {
             HStack(alignment: .firstTextBaseline) {
                 SectionHeader(title)
                 Spacer()
-                let open = due.filter { !$0.isCompleted }.count
+                let open = due.count { !$0.isCompleted }
                 if !due.isEmpty {
                     Text(open == 0 ? "All done" : "\(open) left")
                         .font(.subheadline)

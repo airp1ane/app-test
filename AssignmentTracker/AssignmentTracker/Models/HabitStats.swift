@@ -97,7 +97,7 @@ nonisolated struct HabitStats: Equatable, Sendable {
             }
         }
         currentStreak = run
-        totalOnTime = settled.filter(\.isOnTime).count
+        totalOnTime = settled.count(where: \.isOnTime)
 
         earlyFinishes = counted.filter { record in
             guard let completedAt = record.completedAt else { return false }
@@ -107,11 +107,11 @@ nonisolated struct HabitStats: Equatable, Sendable {
         let monthAgo = calendar.date(byAdding: .day, value: -30, to: now)!
         // Settled work due in the last 30 days, plus anything already finished ahead of time.
         let recent = settled.filter { $0.dueDate >= monthAgo }
-        onTimeRate = recent.isEmpty ? nil : Double(recent.filter(\.isOnTime).count) / Double(recent.count)
+        onTimeRate = recent.isEmpty ? nil : Double(recent.count(where: \.isOnTime)) / Double(recent.count)
 
         let today = counted.filter { $0.dueDate >= startOfToday && $0.dueDate < tomorrow }
         dueToday = today.count
-        openToday = today.filter { $0.completedAt == nil }.count
+        openToday = today.count { $0.completedAt == nil }
 
         perfectWeeks = Self.perfectWeekCount(counted, now: now, calendar: calendar)
 
@@ -125,7 +125,7 @@ nonisolated struct HabitStats: Equatable, Sendable {
         let byWeek = Dictionary(grouping: records.filter { $0.dueDate < thisWeek }) {
             calendar.mondayWeekStart(for: $0.dueDate) ?? $0.dueDate
         }
-        return byWeek.values.filter { $0.allSatisfy(\.isOnTime) }.count
+        return byWeek.values.count { $0.allSatisfy(\.isOnTime) }
     }
 
     // MARK: - Rewards

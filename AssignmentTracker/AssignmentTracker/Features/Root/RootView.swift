@@ -168,7 +168,7 @@ extension RootView {
         // only changes within the same day are celebrated.
         let old = lastStats
         let statsDay = lastStatsDay
-        let finished = records.filter { $0.completedAt != nil }.count
+        let finished = records.count { $0.completedAt != nil }
         let finishedMore = finished > lastFinishedCount
         stats = new
         lastStats = new

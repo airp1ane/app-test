@@ -13,9 +13,9 @@ struct BadgesView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 10) {
-                SectionHeader("\(stats.badges.filter(\.isUnlocked).count) of \(stats.badges.count) earned")
+                SectionHeader("\(stats.badges.count(where: \.isUnlocked)) of \(stats.badges.count) earned")
                 GlassGroup {
-                    ForEach(Array(ordered.enumerated()), id: \.element.id) { index, badge in
+                    ForEach(ordered.enumerated(), id: \.element.id) { index, badge in
                         if index > 0 { InsetDivider() }
                         BadgeRow(badge: badge)
                     }

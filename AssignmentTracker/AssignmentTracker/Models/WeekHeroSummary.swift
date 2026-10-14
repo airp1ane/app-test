@@ -33,8 +33,8 @@ nonisolated struct WeekHeroSummary: Equatable, Sendable {
         let window = WeekWindow(now: now, calendar: calendar)
         let inWindow = items.filter { window.contains($0.dueDate) }
         total = inWindow.count
-        done = inWindow.filter(\.isCompleted).count
-        dueToday = items.filter { !$0.isCompleted && calendar.isDate($0.dueDate, inSameDayAs: now) }.count
+        done = inWindow.count(where: \.isCompleted)
+        dueToday = items.count { !$0.isCompleted && calendar.isDate($0.dueDate, inSameDayAs: now) }
 
         guard let monday = calendar.mondayWeekStart(for: now) else { return }
         let today = calendar.startOfDay(for: now)

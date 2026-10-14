@@ -48,15 +48,15 @@ final class SyllabusImportModel {
     }
 
     var includedCount: Int {
-        candidates.filter { $0.isIncluded && $0.dueDate != nil }.count
+        candidates.count { $0.isIncluded && $0.dueDate != nil }
     }
 
     var pastIncludedCount: Int {
-        candidates.filter { $0.isIncluded && $0.isPast(relativeTo: referenceDate, calendar: calendar) }.count
+        candidates.count { $0.isIncluded && $0.isPast(relativeTo: referenceDate, calendar: calendar) }
     }
 
     var undatedCount: Int {
-        candidates.filter { $0.dueDate == nil }.count
+        candidates.count { $0.dueDate == nil }
     }
 
     /// Checks or unchecks every past (non-duplicate) item at once.

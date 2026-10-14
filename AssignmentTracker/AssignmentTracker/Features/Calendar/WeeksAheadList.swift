@@ -38,7 +38,7 @@ struct WeeksAheadList: View {
                     AssignmentGroup(assignments: overdueItems)
                 }
             }
-            ForEach(Array(weeks.enumerated()), id: \.element.id) { index, week in
+            ForEach(weeks.enumerated(), id: \.element.id) { index, week in
                 WeekSection(title: title(for: week, index: index), start: week.start, items: week.items)
             }
         }
@@ -63,7 +63,7 @@ private struct WeekSection: View {
     private let calendar = Calendar.current
 
     private var open: [Assignment] { items.filter { !$0.isCompleted } }
-    private var examCount: Int { open.filter { $0.kind == .exam }.count }
+    private var examCount: Int { open.count { $0.kind == .exam } }
     private var isBusy: Bool { open.count >= 5 || examCount > 0 }
 
     private var summary: String {

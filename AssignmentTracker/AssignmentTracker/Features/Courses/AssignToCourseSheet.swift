@@ -21,7 +21,7 @@ struct AssignToCourseSheet: View {
                         .glassCard(cornerRadius: 26)
                     } else {
                         GlassGroup {
-                            ForEach(Array(unassigned.enumerated()), id: \.element.id) { index, assignment in
+                            ForEach(unassigned.enumerated(), id: \.element.id) { index, assignment in
                                 if index > 0 { InsetDivider(leading: 12) }
                                 row(for: assignment)
                             }

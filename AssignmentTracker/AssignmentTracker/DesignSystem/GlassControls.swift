@@ -157,7 +157,7 @@ struct TintTile: View {
                 switch content {
                 case .text(let text):
                     Text(text)
-                        .font(.subheadline.weight(.bold))
+                        .font(.subheadline.bold())
                         .foregroundStyle(color)
                 case .icon(let name):
                     AppIcon(name, size: size * 0.5)

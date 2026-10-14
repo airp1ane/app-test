@@ -168,7 +168,7 @@ struct CoreFlowTests {
         }
         let grouped = Dictionary(grouping: items, by: bucket)
         func titles(_ b: DueBucket) -> Set<String> { Set((grouped[b] ?? []).map(\.title)) }
-        func open(_ b: DueBucket) -> Int { (grouped[b] ?? []).filter { !$0.isCompleted }.count }
+        func open(_ b: DueBucket) -> Int { (grouped[b] ?? []).count { !$0.isCompleted } }
 
         #expect(titles(.overdue) == ["overdue open", "overdue open 2"])
         #expect(titles(.earlier) == ["overdue done"])

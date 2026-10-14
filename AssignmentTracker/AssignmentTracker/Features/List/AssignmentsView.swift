@@ -173,7 +173,7 @@ struct AssignmentsView: View {
             guard !items.isEmpty else { return nil }
             // Most recent first for past work; soonest first everywhere else.
             if bucket == .earlier { items.reverse() }
-            return BucketSection(bucket: bucket, items: items, left: all.filter { !$0.isCompleted }.count)
+            return BucketSection(bucket: bucket, items: items, left: all.count { !$0.isCompleted })
         }
     }
 
@@ -261,7 +261,7 @@ private struct StripDay: View {
                     if day.isToday { Circle().fill(Palette.accent) }
                 }
             HStack(spacing: 3) {
-                ForEach(Array(day.dots.prefix(4).enumerated()), id: \.offset) { _, color in
+                ForEach(day.dots.prefix(4).enumerated(), id: \.offset) { _, color in
                     Circle()
                         .fill(color?.color ?? CourseColor.graphite.color)
                         .frame(width: 5, height: 5)

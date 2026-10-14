@@ -78,10 +78,7 @@ struct CandidateEditorSheet: View {
                         Divider()
                         HStack {
                             RowLabel("Weight", icon: .badge)
-                            TextField("e.g. 15%", text: Binding(
-                                get: { draft.weight ?? "" },
-                                set: { draft.weight = CandidateText.isBlank($0) ? nil : $0 }
-                            ))
+                            TextField("e.g. 15%", text: $draft.weightText)
                             .multilineTextAlignment(.trailing)
                         }
                         .frame(minHeight: 52)
