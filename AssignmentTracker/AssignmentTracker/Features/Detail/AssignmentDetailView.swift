@@ -53,7 +53,6 @@ struct AssignmentDetailView: View {
         .background { DuskBackground() }
         .navigationBarTitleDisplayMode(.inline)
         .toolbarVisibility(.hidden, for: .tabBar)
-        .duskBackButton()
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {

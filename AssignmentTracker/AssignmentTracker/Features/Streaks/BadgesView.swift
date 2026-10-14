@@ -30,6 +30,5 @@ struct BadgesView: View {
         .navigationBarTitleDisplayMode(.large)
         .toolbarVisibility(.visible, for: .navigationBar)
         .toolbarVisibility(.hidden, for: .tabBar)
-        .duskBackButton()
     }
 }
