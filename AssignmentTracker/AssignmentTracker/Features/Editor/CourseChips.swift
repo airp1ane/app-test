@@ -52,7 +52,7 @@ struct CourseChips: View {
             }
             .contentShape(.capsule)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
         .background {
             if isSelected { Capsule().fill(course.color.opacity(0.14)) }
         }

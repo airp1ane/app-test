@@ -73,6 +73,7 @@ struct AssignmentDetailView: View {
                 completeButton
                     .padding(.horizontal, 20)
                     .padding(.bottom, 4)
+                    .sensoryFeedback(trigger: assignment.isCompleted) { _, isDone in isDone ? .impact(weight: .light) : nil }
             }
         }
         .sheet(isPresented: $isEditing) {
@@ -161,10 +162,10 @@ struct AssignmentDetailView: View {
                 .font(.headline)
                 .foregroundStyle(Palette.onAccentFill)
                 .frame(maxWidth: .infinity, minHeight: 58)
+                .accentFill(in: Capsule())
                 .contentShape(.capsule)
             }
-            .buttonStyle(.plain)
-            .accentFill(in: Capsule())
+            .buttonStyle(.pressable(scale: 0.98))
         }
     }
 }

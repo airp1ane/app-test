@@ -161,7 +161,7 @@ struct AssignmentEditorSheet: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.bottom, 10)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
             }
         }
         .padding(.horizontal, 16)

@@ -14,6 +14,9 @@ struct RootView: View {
     @State private var calendarDay = Calendar.current.startOfDay(for: .now)
     @State private var calendarFocus = 0
     @State private var celebration: Celebration?
+    /// How far the toast is being dragged; while it's held it doesn't time out.
+    @State private var toastOffset: CGFloat = 0
+    @State private var isHoldingToast = false
     /// Worked out when completion history changes (or the time does), not on every render.
     @State private var stats = HabitStats()
     @State private var lastStats: HabitStats?
@@ -26,6 +29,7 @@ struct RootView: View {
     /// rebuilding the tabs (which would throw away open sheets and navigation).
     @State private var now = Date.now
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var records: [CompletionRecord] {
         assignments.map(\.completionRecord)
@@ -60,9 +64,15 @@ struct RootView: View {
         .overlay(alignment: .top) {
             if let celebration {
                 CelebrationToast(celebration: celebration)
+                    .offset(y: toastOffset)
                     .padding(.top, 8)
-                    .transition(.move(edge: .top).combined(with: .opacity))
-                    .onTapGesture { withAnimation(.snappy) { self.celebration = nil } }
+                    // It leaves the way it came in: back up off the top.
+                    .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
+                    // A tap gesture rather than a Button, so the swipe below can share the toast.
+                    .onTapGesture { dismissToast(velocity: 0) }
+                    .gesture(toastSwipe)
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityHint("Dismisses")
             }
         }
         .sensoryFeedback(.success, trigger: celebration) { _, new in new != nil }
@@ -81,13 +91,19 @@ struct RootView: View {
             guard !Task.isCancelled else { return }
             refreshTime()
         }
-        .task(id: celebration) {
-            guard celebration != nil else { return }
+        .task(id: ToastTimer(celebration: celebration, isHeld: isHoldingToast)) {
+            guard celebration != nil, !isHoldingToast else { return }
             await clearAfterDelay(.seconds(3)) {
                 withAnimation(.snappy) { celebration = nil }
             }
         }
     }
+}
+
+/// Restarts the toast's timeout when a new one appears or it's let go.
+private struct ToastTimer: Equatable {
+    let celebration: Celebration?
+    let isHeld: Bool
 }
 
 /// Waits for `delay`, then runs `clear`. A newer celebration (or a tap) cancels the task, and a
@@ -99,9 +115,13 @@ func clearAfterDelay(_ delay: Duration, clear: () -> Void) async {
     clear()
 }
 
+/// The fallback for `currentTime` outside `RootView` (previews). Fixed once, because an `@Entry`
+/// default is evaluated on every read and `.now` would differ each time.
+private let launchTime = Date.now
+
 extension EnvironmentValues {
     /// The time screens compare due dates against, kept by `RootView` (see `now` there).
-    @Entry var currentTime: Date = .now
+    @Entry var currentTime: Date = launchTime
 }
 
 extension AppTab {
@@ -156,19 +176,54 @@ extension RootView {
         lastFinishedCount = finished
         guard celebrate, finishedMore, Calendar.current.isDateInToday(statsDay),
               let old, let found = new.celebration(since: old) else { return }
-        withAnimation(.spring(duration: 0.45, bounce: 0.3)) { celebration = found }
+        toastOffset = 0
+        withAnimation(reduceMotion ? .easeInOut(duration: 0.2) : .spring(duration: 0.45, bounce: 0.3)) { celebration = found }
+    }
+
+    /// The toast follows the finger. Up is the way out; down it resists more the further it's
+    /// pulled, since there's nowhere for it to go.
+    private var toastSwipe: some Gesture {
+        DragGesture(minimumDistance: 6)
+            .onChanged { value in
+                isHoldingToast = true
+                let y = value.translation.height
+                toastOffset = y < 0 ? y : Momentum.rubberBand(y, dimension: 120)
+            }
+            .onEnded { value in
+                isHoldingToast = false
+                let velocity = value.velocity.height
+                // Throw it by where the swipe was heading, not just where the finger let go.
+                if toastOffset + Momentum.project(velocity) < -30 {
+                    dismissToast(velocity: velocity)
+                } else {
+                    let relative = toastOffset != 0 ? velocity / -toastOffset : 0
+                    withAnimation(.interpolatingSpring(Spring(response: 0.35, dampingRatio: 0.8), initialVelocity: relative)) {
+                        toastOffset = 0
+                    }
+                }
+            }
+    }
+
+    private func dismissToast(velocity: CGFloat) {
+        // Faster swipes leave faster.
+        let response = velocity < -600 ? 0.25 : 0.35
+        withAnimation(reduceMotion ? .easeInOut(duration: 0.2) : .spring(response: response, dampingFraction: 1)) {
+            celebration = nil
+        }
     }
 }
+
 
 struct CelebrationToast: View {
     let celebration: Celebration
     @State private var bounce = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(spacing: 12) {
             AppIcon(celebration.icon, size: 26)
                 .foregroundStyle(Palette.streakOrange)
-                .scaleEffect(bounce ? 1 : 0.6)
+                .scaleEffect(bounce || reduceMotion ? 1 : 0.6)
                 .animation(.spring(duration: 0.4, bounce: 0.5), value: bounce)
             VStack(alignment: .leading, spacing: 2) {
                 Text(celebration.title)

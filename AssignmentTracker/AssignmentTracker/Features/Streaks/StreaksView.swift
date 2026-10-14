@@ -38,6 +38,7 @@ private struct StreakCard: View {
     let stats: HabitStats
 
     @ScaledMetric(relativeTo: .largeTitle) private var numberSize: CGFloat = 44
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var message: String {
         if stats.allDoneToday { return "Everything due today is done." }
@@ -50,8 +51,8 @@ private struct StreakCard: View {
         VStack(alignment: .leading, spacing: 18) {
             HStack(spacing: 16) {
                 TintTile(content: .icon(.streaks), color: Palette.streakOrange, size: 60, cornerRadius: 20)
-                    // A quick hop when the streak changes (symbolEffect only animates SF Symbols).
-                    .keyframeAnimator(initialValue: 1.0, trigger: stats.currentStreak) { tile, scale in
+                    // A quick hop when the streak changes (symbolEffect only animates SF Symbols); none with Reduce Motion.
+                    .keyframeAnimator(initialValue: 1.0, trigger: reduceMotion ? 0 : stats.currentStreak) { tile, scale in
                         tile.scaleEffect(scale)
                     } keyframes: { _ in
                         SpringKeyframe(1.18, duration: 0.15)

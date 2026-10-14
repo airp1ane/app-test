@@ -22,7 +22,7 @@ struct AssignmentRow: View {
                     .frame(width: 44, height: 44)
                     .contentShape(.rect)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
             .accessibilityLabel(assignment.isCompleted
                 ? "Mark \(assignment.title) as not done"
                 : "Mark \(assignment.title) as done")
@@ -55,7 +55,7 @@ struct AssignmentRow: View {
                         }
                         if let tag {
                             Text(tag)
-                                .font(.caption2.weight(.semibold))
+                                .font(.caption.weight(.semibold))
                                 .foregroundStyle(Palette.accentText)
                                 .padding(.horizontal, 7)
                                 .padding(.vertical, 2)
@@ -69,7 +69,7 @@ struct AssignmentRow: View {
                 .padding(.vertical, 8)
                 .contentShape(.rect)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
         }
         .padding(.leading, 4)
         .padding(.trailing, 12)

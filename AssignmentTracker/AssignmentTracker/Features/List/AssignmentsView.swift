@@ -61,12 +61,19 @@ struct AssignmentsView: View {
                     )
 
                     if sections.isEmpty {
-                        Text(searchText.isEmpty ? "Nothing here yet." : "No matching assignments.")
-                            .font(.subheadline)
-                            .foregroundStyle(Palette.secondaryText)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 28)
-                            .glassCard()
+                        Group {
+                            if searchText.isEmpty {
+                                ContentUnavailableView {
+                                    Label(filter == .done ? "Nothing Done Yet" : "No Assignments", appIcon: .assignments)
+                                } description: {
+                                    Text(filter == .done ? "Finished work shows up here." : "Tap + to add one, or import a syllabus.")
+                                }
+                            } else {
+                                // The app's own search field, not `searchable()`, so pass the text.
+                                ContentUnavailableView.search(text: searchText)
+                            }
+                        }
+                        .glassCard()
                     }
 
                     ForEach(sections) { section in
@@ -119,7 +126,7 @@ struct AssignmentsView: View {
                         .frame(width: 44, height: 44)
                         .contentShape(.rect)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 .accessibilityLabel("Clear search")
             }
         }
@@ -203,7 +210,7 @@ private struct WeekHeroCard: View {
                         .font(.footnote.weight(.medium))
                         .foregroundStyle(Palette.secondaryText)
                     Text("\(summary.remaining) to go")
-                        .font(.system(size: 28, weight: .bold))
+                        .font(.title.bold())
                         .tracking(-0.5)
                         .contentTransition(.numericText())
                     Text(summary.dueTodayText)
@@ -223,7 +230,7 @@ private struct WeekHeroCard: View {
                     Button { onShowDay(day.date) } label: {
                         StripDay(day: day)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                     .accessibilityLabel(WeekHeroSummary.accessibilityLabel(for: day))
                     .accessibilityHint("Opens this day in Calendar")
                 }
@@ -247,7 +254,7 @@ private struct StripDay: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(Palette.secondaryText)
             Text(day.date.formatted(.dateTime.day()))
-                .font(.system(size: 15, weight: day.isToday ? .bold : .medium))
+                .font(.subheadline.weight(day.isToday ? .bold : .medium))
                 .foregroundStyle(day.isToday ? Palette.onAccent : (day.isPast ? Palette.mutedNumber : Palette.text))
                 .frame(width: 34, height: 34)
                 .background {

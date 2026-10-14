@@ -13,12 +13,12 @@ struct AssignToCourseSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     if unassigned.isEmpty {
-                        Text("Every assignment has a course.")
-                            .font(.subheadline)
-                            .foregroundStyle(Palette.secondaryText)
-                            .frame(maxWidth: .infinity)
-                            .padding(24)
-                            .glassCard(cornerRadius: 26)
+                        ContentUnavailableView {
+                            Label("All Assigned", appIcon: .check)
+                        } description: {
+                            Text("Every assignment has a course.")
+                        }
+                        .glassCard(cornerRadius: 26)
                     } else {
                         GlassGroup {
                             ForEach(Array(unassigned.enumerated()), id: \.element.id) { index, assignment in

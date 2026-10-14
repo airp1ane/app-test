@@ -51,7 +51,7 @@ struct CoursesView: View {
                                 Button { editing = item.course } label: {
                                     CourseRow(course: item.course, summary: item.summary)
                                 }
-                                .buttonStyle(.plain)
+                                .buttonStyle(.pressable)
                             }
                         }
                     }
@@ -75,16 +75,11 @@ struct CoursesView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 8) {
-            Text("No courses yet")
-                .font(.headline)
+        ContentUnavailableView {
+            Label("No Courses", appIcon: .courses)
+        } description: {
             Text("Add a course, or import a syllabus to create one with its assignments.")
-                .font(.subheadline)
-                .foregroundStyle(Palette.secondaryText)
-                .multilineTextAlignment(.center)
         }
-        .frame(maxWidth: .infinity)
-        .padding(24)
         .glassCard(cornerRadius: 26)
     }
 
@@ -108,7 +103,7 @@ struct CoursesView: View {
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
-        .glassCard(cornerRadius: 22)
+        .glassCard(cornerRadius: 22, interactive: true)
         .accessibilityLabel(text)
         .accessibilityHint("Choose a course for each")
     }

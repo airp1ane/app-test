@@ -9,26 +9,28 @@ struct GlassCircleButton: View {
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
-            AppIcon(icon, size: isProminent ? 22 : 20, weight: isProminent ? 2.2 : nil)
-                .foregroundStyle(isProminent ? Palette.onAccentFill : Palette.text)
-                .frame(width: 44, height: 44)
-                .contentShape(.circle)
-        }
-        .buttonStyle(.plain)
-        .modifier(CircleSurface(isProminent: isProminent))
-        .accessibilityLabel(label)
-    }
-}
-
-private struct CircleSurface: ViewModifier {
-    let isProminent: Bool
-
-    func body(content: Content) -> some View {
         if isProminent {
-            content.accentFill(in: Circle())
+            // The fill is part of the label, so the whole disc presses in, not just the icon.
+            Button(action: action) {
+                AppIcon(icon, size: 22, weight: 2.2)
+                    .foregroundStyle(Palette.onAccentFill)
+                    .frame(width: 44, height: 44)
+                    .accentFill(in: Circle())
+                    .contentShape(.circle)
+            }
+            .buttonStyle(.pressable(scale: 0.92))
+            .accessibilityLabel(label)
         } else {
-            content.duskGlass(in: Circle(), interactive: true)
+            // Interactive glass gives its own press response.
+            Button(action: action) {
+                AppIcon(icon, size: 20)
+                    .foregroundStyle(Palette.text)
+                    .frame(width: 44, height: 44)
+                    .contentShape(.circle)
+            }
+            .buttonStyle(.plain)
+            .duskGlass(in: Circle(), interactive: true)
+            .accessibilityLabel(label)
         }
     }
 }

@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// A course-colored check: an open 20pt ring (2pt stroke) when off, a filled 24pt circle with
-/// a check when on.
+/// a check when on. Checking it gives a light tap, on the same frame the fill appears.
 struct CheckCircle: View {
     var isOn: Bool
     var tint: Color
@@ -23,6 +23,7 @@ struct CheckCircle: View {
         }
         .frame(width: 24, height: 24)
         .animation(.snappy(duration: 0.2), value: isOn)
+        .sensoryFeedback(trigger: isOn) { _, isOn in isOn ? .impact(weight: .light) : nil }
     }
 }
 

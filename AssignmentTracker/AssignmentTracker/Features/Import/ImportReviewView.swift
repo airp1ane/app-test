@@ -38,23 +38,21 @@ struct ImportReviewView: View {
                 summaryCard
 
                 if model.candidates.isEmpty {
-                    VStack(spacing: 8) {
-                        Text("No assignments found")
-                            .font(.headline)
+                    ContentUnavailableView {
+                        Label("No Assignments Found", appIcon: .notes)
+                    } description: {
                         Text("This syllabus didn’t list any graded work the app could recognize. You can add items yourself.")
-                            .font(.subheadline)
-                            .foregroundStyle(Palette.secondaryText)
-                            .multilineTextAlignment(.center)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(24)
                     .glassCard()
                 }
 
+                // Sorted and grouped in one pass, not once per group.
+                let grouped = Dictionary(
+                    grouping: model.candidates.sorted { ($0.dueDate ?? .distantFuture) < ($1.dueDate ?? .distantFuture) },
+                    by: group(of:)
+                )
                 ForEach(ReviewGroup.allCases, id: \.self) { group in
-                    let items = model.candidates
-                        .filter { self.group(of: $0) == group }
-                        .sorted { ($0.dueDate ?? .distantFuture) < ($1.dueDate ?? .distantFuture) }
+                    let items = grouped[group] ?? []
                     if !items.isEmpty {
                         VStack(alignment: .leading, spacing: 10) {
                             HStack {
@@ -122,10 +120,10 @@ struct ImportReviewView: View {
                         .font(.headline)
                         .foregroundStyle(Palette.onAccentFill)
                         .frame(maxWidth: .infinity, minHeight: 52)
+                        .accentFill(in: Capsule())
                         .contentShape(.capsule)
                 }
-                .buttonStyle(.plain)
-                .accentFill(in: Capsule())
+                .buttonStyle(.pressable(scale: 0.98))
                 .disabled(model.includedCount == 0)
                 .opacity(model.includedCount == 0 ? 0.5 : 1)
                 if let saveFootnote {
@@ -281,7 +279,7 @@ struct ImportReviewView: View {
                 .frame(minHeight: 52)
                 .contentShape(.rect)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
         }
     }
 }
@@ -300,7 +298,7 @@ private struct CandidateRow: View {
                     .frame(width: 44, height: 44)
                     .contentShape(.rect)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
             .accessibilityLabel(candidate.isIncluded ? "Don’t add \(candidate.title)" : "Add \(candidate.title)")
 
             Button(action: onOpen) {
@@ -338,7 +336,7 @@ private struct CandidateRow: View {
                 .padding(.vertical, 10)
                 .contentShape(.rect)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
         }
         .padding(.leading, 6)
         .padding(.trailing, 14)

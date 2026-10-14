@@ -45,7 +45,7 @@ struct PlanCard: View {
                         .frame(width: 44, height: 44)
                         .contentShape(.rect)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 .accessibilityLabel("Clear work day")
             } else {
                 Button {
@@ -65,7 +65,7 @@ struct PlanCard: View {
                     }
                     .contentShape(.rect)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 .accessibilityHint("Plans it for the day before it’s due")
             }
         }

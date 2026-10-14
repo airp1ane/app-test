@@ -119,7 +119,7 @@ private struct DayLoadStrip: View {
                         .frame(maxWidth: 18)
                         .frame(height: CGFloat(4 + min(dueThatDay.count, 4) * 7))
                     Text(day.formatted(.dateTime.weekday(.narrow)))
-                        .font(.caption2.weight(calendar.isDate(day, inSameDayAs: now) ? .bold : .regular))
+                        .font(.caption.weight(calendar.isDate(day, inSameDayAs: now) ? .bold : .regular))
                         .foregroundStyle(calendar.isDate(day, inSameDayAs: now) ? Palette.accent : Palette.secondaryText)
                 }
                 .frame(maxWidth: .infinity)

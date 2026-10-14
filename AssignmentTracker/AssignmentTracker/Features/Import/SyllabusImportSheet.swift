@@ -138,7 +138,7 @@ struct SyllabusImportSheet: View {
                 // No photo glyph in the app's icon set; SF Symbol fallback.
                 SourceRowLabel(title: "Photo Library", fallbackSymbol: "photo.on.rectangle")
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
             if VNDocumentCameraViewController.isSupported {
                 Divider()
                 SourceRow(title: "Scan Document", icon: .scan) { isScanning = true }
@@ -161,7 +161,7 @@ private struct SourceRow: View {
         Button(action: action) {
             SourceRowLabel(title: title, icon: icon)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 }
 

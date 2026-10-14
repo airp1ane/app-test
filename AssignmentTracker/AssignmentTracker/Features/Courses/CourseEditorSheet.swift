@@ -180,7 +180,7 @@ struct ColorGrid: View {
                         }
                         .frame(width: 46, height: 46)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 .accessibilityLabel(option.name)
                 .accessibilityAddTraits(option == selection ? .isSelected : [])
             }

@@ -53,7 +53,7 @@ struct StepsCard: View {
                     .frame(minHeight: 48)
                     .contentShape(.rect)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 .accessibilityAddTraits(step.isDone ? .isSelected : [])
                 .contextMenu {
                     Button("Delete Step", systemImage: "trash", role: .destructive) {
