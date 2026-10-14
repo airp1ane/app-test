@@ -152,7 +152,7 @@ final class SyllabusImportModel {
     // MARK: - Review edits
 
     func addCandidate() -> ImportCandidate.ID {
-        let tomorrow = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: referenceDate))!
+        let tomorrow = calendar.adding(.day, 1, to: calendar.startOfDay(for: referenceDate))
         var candidate = ImportCandidate(
             title: "", kind: .assignment,
             dueDate: calendar.date(bySettingHour: 23, minute: 59, second: 0, of: tomorrow),

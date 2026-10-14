@@ -51,6 +51,22 @@ nonisolated extension Calendar {
         mondayCalendar.firstWeekday = 2
         return mondayCalendar.dateInterval(of: .weekOfYear, for: date)?.start
     }
+
+    /// `date` moved by `value` units. Adding days, weeks or months to a real date doesn't fail in
+    /// practice, so returning `date` unchanged is only a defensive fallback.
+    func adding(_ component: Component, _ value: Int, to date: Date) -> Date {
+        self.date(byAdding: component, value: value, to: date) ?? date
+    }
+
+    /// Start of the day, week or month containing `date` (falling back to the start of its day).
+    func start(of component: Component, for date: Date) -> Date {
+        dateInterval(of: component, for: date)?.start ?? startOfDay(for: date)
+    }
+
+    /// How many days the month containing `date` has.
+    func daysInMonth(of date: Date) -> Int {
+        range(of: .day, in: .month, for: date)?.count ?? 30
+    }
 }
 
 nonisolated extension Date {

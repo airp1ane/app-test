@@ -20,7 +20,7 @@ struct CalendarView: View {
     @Environment(\.currentTime) private var now
     @Environment(\.calendar) private var calendar
     @State private var mode: Mode = .month
-    @State private var month = Calendar.current.dateInterval(of: .month, for: .now)!.start
+    @State private var month = Calendar.current.start(of: .month, for: .now)
 
     var body: some View {
         NavigationStack {
@@ -69,7 +69,7 @@ extension CalendarView {
     /// Switches to the month view with `day`'s month on screen.
     private func show(_ day: Date) {
         if !calendar.isDate(day, equalTo: month, toGranularity: .month) {
-            month = calendar.dateInterval(of: .month, for: day)!.start
+            month = calendar.start(of: .month, for: day)
         }
         mode = .month
     }
@@ -143,7 +143,7 @@ struct MonthGridCard: View {
 
     private func step(_ months: Int) {
         withAnimation(stepAnimation) {
-            month = calendar.date(byAdding: .month, value: months, to: month)!
+            month = calendar.adding(.month, months, to: month)
         }
     }
 
@@ -151,7 +151,7 @@ struct MonthGridCard: View {
         withAnimation(stepAnimation) {
             selectedDay = day
             if !calendar.isDate(day, equalTo: month, toGranularity: .month) {
-                month = calendar.dateInterval(of: .month, for: day)!.start
+                month = calendar.start(of: .month, for: day)
             }
         }
     }
@@ -181,14 +181,14 @@ private struct MonthPager: View {
 
     /// Months are numbered from a fixed month, so stepping one month moves every page by one
     /// width and SwiftUI animates the strip as a whole.
-    private static let anchor = Calendar.current.dateInterval(of: .month, for: Date(timeIntervalSinceReferenceDate: 0))!.start
+    private static let anchor = Calendar.current.start(of: .month, for: Date(timeIntervalSinceReferenceDate: 0))
 
     private var index: Int {
         calendar.dateComponents([.month], from: Self.anchor, to: month).month ?? 0
     }
 
     private func month(at index: Int) -> Date {
-        calendar.date(byAdding: .month, value: index, to: Self.anchor)!
+        calendar.adding(.month, index, to: Self.anchor)
     }
 
     var body: some View {
@@ -278,10 +278,10 @@ private struct MonthDays: View {
 
     private var days: [Date] {
         let leading = (calendar.component(.weekday, from: month) - calendar.firstWeekday + 7) % 7
-        let count = calendar.range(of: .day, in: .month, for: month)!.count
+        let count = calendar.daysInMonth(of: month)
         let cells = Int(ceil(Double(leading + count) / 7)) * 7
-        let start = calendar.date(byAdding: .day, value: -leading, to: month)!
-        return (0..<cells).map { calendar.date(byAdding: .day, value: $0, to: start)! }
+        let start = calendar.adding(.day, -leading, to: month)
+        return (0..<cells).map { calendar.adding(.day, $0, to: start) }
     }
 
     var body: some View {
@@ -376,7 +376,7 @@ private struct DayAgenda: View {
 
     private var range: Range<Date> {
         let start = calendar.startOfDay(for: day)
-        return start..<calendar.date(byAdding: .day, value: 1, to: start)!
+        return start..<calendar.adding(.day, 1, to: start)
     }
 
     private var title: String {

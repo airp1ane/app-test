@@ -8,7 +8,7 @@ struct PlanCard: View {
 
     private var suggestedDay: Date {
         // The day before it's due, but never earlier than today.
-        let dayBefore = calendar.date(byAdding: .day, value: -1, to: calendar.startOfDay(for: assignment.dueDate))!
+        let dayBefore = calendar.adding(.day, -1, to: calendar.startOfDay(for: assignment.dueDate))
         return max(dayBefore, calendar.startOfDay(for: now))
     }
 

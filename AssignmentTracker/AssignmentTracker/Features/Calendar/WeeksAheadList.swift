@@ -21,10 +21,10 @@ struct WeeksAheadList: View {
     }
 
     private var weeks: [Week] {
-        let thisWeek = calendar.dateInterval(of: .weekOfYear, for: now)!.start
+        let thisWeek = calendar.start(of: .weekOfYear, for: now)
         return (0..<Self.weekCount).map { offset in
-            let start = calendar.date(byAdding: .weekOfYear, value: offset, to: thisWeek)!
-            let end = calendar.date(byAdding: .weekOfYear, value: 1, to: start)!
+            let start = calendar.adding(.weekOfYear, offset, to: thisWeek)
+            let end = calendar.adding(.weekOfYear, 1, to: start)
             return Week(start: start, items: assignments.filter { $0.dueDate >= start && $0.dueDate < end })
         }
     }
@@ -49,7 +49,7 @@ struct WeeksAheadList: View {
         case 0: return "This week"
         case 1: return "Next week"
         default:
-            let end = calendar.date(byAdding: .day, value: 6, to: week.start)!
+            let end = calendar.adding(.day, 6, to: week.start)
             return "\(week.start.formatted(.dateTime.month(.abbreviated).day())) – \(end.formatted(.dateTime.month(.abbreviated).day()))"
         }
     }
@@ -110,7 +110,7 @@ private struct DayLoadStrip: View {
     var body: some View {
         HStack(alignment: .bottom, spacing: 6) {
             ForEach(0..<7, id: \.self) { offset in
-                let day = calendar.date(byAdding: .day, value: offset, to: start)!
+                let day = calendar.adding(.day, offset, to: start)
                 let dueThatDay = items.filter { calendar.isDate($0.dueDate, inSameDayAs: day) }
                 VStack(spacing: 4) {
                     // A narrow bar, so a busy day reads as taller rather than as a wide blob.

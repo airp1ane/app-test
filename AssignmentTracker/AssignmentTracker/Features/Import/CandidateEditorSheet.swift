@@ -183,8 +183,8 @@ struct CandidateEditorSheet: View {
 
     private static func tomorrowEvening() -> Date {
         let calendar = Calendar.current
-        let tomorrow = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: .now))!
-        return calendar.date(bySettingHour: 23, minute: 59, second: 0, of: tomorrow)!
+        let tomorrow = calendar.adding(.day, 1, to: calendar.startOfDay(for: .now))
+        return calendar.date(bySettingHour: 23, minute: 59, second: 0, of: tomorrow) ?? tomorrow
     }
 }
 
