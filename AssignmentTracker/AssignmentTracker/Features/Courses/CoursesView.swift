@@ -113,6 +113,7 @@ private struct CourseRow: View {
     let course: Course
     let summary: CourseSummary
     @Environment(\.currentTime) private var now
+    @Environment(\.calendar) private var calendar
 
     var body: some View {
         HStack(spacing: 14) {
@@ -122,7 +123,7 @@ private struct CourseRow: View {
                     .font(.body.weight(.semibold))
                     .foregroundStyle(Palette.text)
                     .lineLimit(1)
-                Text(summary.detail(now: now))
+                Text(summary.detail(now: now, calendar: calendar))
                     .font(.subheadline)
                     .foregroundStyle(Palette.secondaryText)
                     .lineLimit(1)

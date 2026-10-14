@@ -30,6 +30,7 @@ struct RootView: View {
     @State private var now = Date.now
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.calendar) private var calendar
 
     private var records: [CompletionRecord] {
         assignments.map(\.completionRecord)
@@ -153,7 +154,6 @@ extension RootView {
     /// Moves `now` on; every screen that shows "Today" or "Overdue" reads it.
     private func refreshTime() {
         // Calendar was showing today: keep it on today once the day changes.
-        let calendar = Calendar.current
         if calendar.isDate(calendarDay, inSameDayAs: now), !calendar.isDate(now, inSameDayAs: .now) {
             calendarDay = calendar.startOfDay(for: .now)
         }
@@ -172,9 +172,9 @@ extension RootView {
         let finishedMore = finished > lastFinishedCount
         stats = new
         lastStats = new
-        lastStatsDay = Calendar.current.startOfDay(for: .now)
+        lastStatsDay = calendar.startOfDay(for: .now)
         lastFinishedCount = finished
-        guard celebrate, finishedMore, Calendar.current.isDateInToday(statsDay),
+        guard celebrate, finishedMore, calendar.isDateInToday(statsDay),
               let old, let found = new.celebration(since: old) else { return }
         toastOffset = 0
         withAnimation(reduceMotion ? .easeInOut(duration: 0.2) : .spring(duration: 0.45, bounce: 0.3)) { celebration = found }
@@ -218,6 +218,7 @@ struct CelebrationToast: View {
     let celebration: Celebration
     @State private var bounce = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.calendar) private var calendar
 
     var body: some View {
         HStack(spacing: 12) {

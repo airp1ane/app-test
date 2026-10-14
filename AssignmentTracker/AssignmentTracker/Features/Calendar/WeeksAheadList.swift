@@ -6,7 +6,7 @@ struct WeeksAheadList: View {
     let assignments: [Assignment]
     @Environment(\.currentTime) private var now
 
-    private let calendar = Calendar.current
+    @Environment(\.calendar) private var calendar
     private static let weekCount = 8
 
     private struct Week: Identifiable {
@@ -60,7 +60,7 @@ private struct WeekSection: View {
     let start: Date
     let items: [Assignment]
 
-    private let calendar = Calendar.current
+    @Environment(\.calendar) private var calendar
 
     private var open: [Assignment] { items.filter { !$0.isCompleted } }
     private var examCount: Int { open.count { $0.kind == .exam } }
@@ -105,7 +105,7 @@ private struct DayLoadStrip: View {
     let items: [Assignment]
     @Environment(\.currentTime) private var now
 
-    private let calendar = Calendar.current
+    @Environment(\.calendar) private var calendar
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 6) {

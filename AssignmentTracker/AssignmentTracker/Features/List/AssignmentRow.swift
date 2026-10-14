@@ -10,6 +10,7 @@ struct AssignmentRow: View {
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.currentTime) private var now
+    @Environment(\.calendar) private var calendar
 
     private var isOverdue: Bool {
         !assignment.isCompleted && assignment.dueDate < now
@@ -82,8 +83,8 @@ struct AssignmentRow: View {
             }
             if !assignment.isCompleted {
                 Menu {
-                    Button("Today") { assignment.plan(for: .now) }
-                    Button("Tomorrow") { assignment.plan(for: Calendar.current.date(byAdding: .day, value: 1, to: .now)) }
+                    Button("Today") { assignment.plan(for: now, calendar: calendar) }
+                    Button("Tomorrow") { assignment.plan(for: calendar.date(byAdding: .day, value: 1, to: now), calendar: calendar) }
                     if assignment.plannedDate != nil {
                         Button("Clear Plan", role: .destructive) { assignment.plan(for: nil) }
                     }

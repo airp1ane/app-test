@@ -18,6 +18,7 @@ struct CalendarView: View {
 
     @Query(sort: \Assignment.dueDate) private var assignments: [Assignment]
     @Environment(\.currentTime) private var now
+    @Environment(\.calendar) private var calendar
     @State private var mode: Mode = .month
     @State private var month = Calendar.current.dateInterval(of: .month, for: .now)!.start
 
@@ -31,7 +32,7 @@ struct CalendarView: View {
                     ) {
                         GlassCapsuleButton(title: "Today") {
                             withAnimation(.snappy) {
-                                selectedDay = Calendar.current.startOfDay(for: now)
+                                selectedDay = calendar.startOfDay(for: now)
                                 show(selectedDay)
                             }
                         }
@@ -67,7 +68,6 @@ struct CalendarView: View {
 extension CalendarView {
     /// Switches to the month view with `day`'s month on screen.
     private func show(_ day: Date) {
-        let calendar = Calendar.current
         if !calendar.isDate(day, equalTo: month, toGranularity: .month) {
             month = calendar.dateInterval(of: .month, for: day)!.start
         }
@@ -84,7 +84,7 @@ struct MonthGridCard: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private let calendar = Calendar.current
+    @Environment(\.calendar) private var calendar
 
     private var weekdaySymbols: [String] {
         let symbols = calendar.veryShortStandaloneWeekdaySymbols
@@ -173,7 +173,7 @@ private struct MonthPager: View {
     @State private var dragAxis: Axis?
     @State private var pageWidth: CGFloat = 0
 
-    private let calendar = Calendar.current
+    @Environment(\.calendar) private var calendar
     /// Space between months while they slide, so the next one starts beyond the card's edge.
     private static let pageGap: CGFloat = 32
     /// Movement before a drag counts as a swipe; subtracted so the month doesn't jump on pickup.
@@ -274,7 +274,7 @@ private struct MonthDays: View {
     let plannedDays: Set<Date>
     let onSelect: (Date) -> Void
 
-    private let calendar = Calendar.current
+    @Environment(\.calendar) private var calendar
 
     private var days: [Date] {
         let leading = (calendar.component(.weekday, from: month) - calendar.firstWeekday + 7) % 7
@@ -310,9 +310,10 @@ private struct DayCell: View {
     let due: [Assignment]
     let hasPlanned: Bool
     @Environment(\.currentTime) private var now
+    @Environment(\.calendar) private var calendar
 
-    private var isToday: Bool { Calendar.current.isDate(day, inSameDayAs: now) }
-    private var isPast: Bool { day < Calendar.current.startOfDay(for: now) }
+    private var isToday: Bool { calendar.isDate(day, inSameDayAs: now) }
+    private var isPast: Bool { day < calendar.startOfDay(for: now) }
 
     var body: some View {
         VStack(spacing: 3) {
@@ -371,7 +372,7 @@ private struct DayAgenda: View {
     let assignments: [Assignment]
     @Environment(\.currentTime) private var now
 
-    private let calendar = Calendar.current
+    @Environment(\.calendar) private var calendar
 
     private var range: Range<Date> {
         let start = calendar.startOfDay(for: day)
