@@ -23,7 +23,7 @@ struct AssignToCourseSheet: View {
                         GlassGroup {
                             ForEach(unassigned.enumerated(), id: \.element.id) { index, assignment in
                                 if index > 0 { InsetDivider(leading: 12) }
-                                row(for: assignment)
+                                CoursePickerRow(assignment: assignment, courses: courses)
                             }
                         }
                     }
@@ -41,37 +41,5 @@ struct AssignToCourseSheet: View {
                 }
             }
         }
-    }
-
-    private func row(for assignment: Assignment) -> some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(assignment.title)
-                    .font(.body.weight(.semibold))
-                    .lineLimit(2)
-                Text(assignment.dueDate.dueRowLabel())
-                    .font(.subheadline)
-                    .foregroundStyle(Palette.secondaryText)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            Menu {
-                ForEach(courses) { course in
-                    Button(course.name) {
-                        withAnimation(.snappy) { assignment.course = course }
-                        ReminderScheduler.sync(assignment)
-                    }
-                }
-            } label: {
-                Text("Choose")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Palette.accentText)
-                    .frame(minHeight: 44)
-                    .contentShape(.rect)
-            }
-            .disabled(courses.isEmpty)
-            .accessibilityLabel("Choose a course for \(assignment.title)")
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
     }
 }

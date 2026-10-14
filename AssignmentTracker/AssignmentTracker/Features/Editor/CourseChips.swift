@@ -1,5 +1,6 @@
 import SwiftUI
 
+/// The classes as tappable chips, for picking one, with an optional "New Class" chip at the end.
 struct CourseChips: View {
     let courses: [Course]
     @Binding var selection: Course?
@@ -10,7 +11,9 @@ struct CourseChips: View {
         GlassEffectContainer {
             FlowLayout(spacing: 8) {
                 ForEach(courses) { course in
-                    chip(for: course)
+                    CourseChip(course: course, isSelected: course == selection) {
+                        withAnimation(.snappy) { selection = course }
+                    }
                 }
                 if let onAddCourse {
                     Button(action: onAddCourse) {
@@ -18,45 +21,16 @@ struct CourseChips: View {
                             AppIcon(.add, size: 16)
                             Text("New Class")
                         }
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(Palette.accentText)
-                            .padding(.horizontal, 16)
-                            .frame(height: 44)
-                            .contentShape(.capsule)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(Palette.accentText)
+                        .padding(.horizontal, 16)
+                        .frame(height: 44)
+                        .contentShape(.capsule)
                     }
                     .buttonStyle(.plain)
                     .duskGlass(in: Capsule(), interactive: true)
                 }
             }
         }
-    }
-
-    private func chip(for course: Course) -> some View {
-        let isSelected = course == selection
-        return Button {
-            withAnimation(.snappy) { selection = course }
-        } label: {
-            HStack(spacing: 8) {
-                Circle()
-                    .fill(course.color)
-                    .frame(width: 8, height: 8)
-                Text(course.name)
-            }
-            .font(.subheadline.weight(isSelected ? .semibold : .medium))
-            .padding(.horizontal, 16)
-            .frame(height: 44)
-            .overlay {
-                if isSelected {
-                    Capsule().strokeBorder(course.color, lineWidth: 2)
-                }
-            }
-            .contentShape(.capsule)
-        }
-        .buttonStyle(.pressable)
-        .background {
-            if isSelected { Capsule().fill(course.color.opacity(0.14)) }
-        }
-        .duskGlass(in: Capsule(), interactive: true)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }

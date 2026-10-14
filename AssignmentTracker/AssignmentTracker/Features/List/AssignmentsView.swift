@@ -49,7 +49,7 @@ struct AssignmentsView: View {
                     }
 
                     if isSearching {
-                        searchField
+                        AssignmentSearchField(text: $searchText, isFocused: $isSearchFocused)
                             .transition(.move(edge: .top).combined(with: .opacity))
                     }
 
@@ -109,33 +109,6 @@ struct AssignmentsView: View {
         }
     }
 
-    private var searchField: some View {
-        HStack(spacing: 10) {
-            AppIcon(.search, size: 18)
-                .foregroundStyle(Palette.secondaryText)
-            TextField("Search assignments", text: $searchText)
-                .focused($isSearchFocused)
-                .submitLabel(.search)
-                .autocorrectionDisabled()
-            if !searchText.isEmpty {
-                Button {
-                    searchText = ""
-                } label: {
-                    AppIcon(.close, size: 16)
-                        .foregroundStyle(Palette.secondaryText)
-                        .frame(width: 44, height: 44)
-                        .contentShape(.rect)
-                }
-                .buttonStyle(.pressable)
-                .accessibilityLabel("Clear search")
-            }
-        }
-        .padding(.leading, 16)
-        .padding(.trailing, searchText.isEmpty ? 16 : 0)
-        .frame(minHeight: 48)
-        .glassCard(cornerRadius: 24)
-    }
-
     private func toggleSearch() {
         isSearching.toggle()
         if isSearching {
@@ -182,95 +155,6 @@ struct AssignmentsView: View {
         return assignment.title.localizedStandardContains(query)
             || (assignment.course?.name.localizedStandardContains(query) ?? false)
             || assignment.notes.localizedStandardContains(query)
-    }
-}
-
-/// The hero card: a progress ring for the week, the count still to go, and a Monday–Sunday strip
-/// with a dot per assignment due each day.
-private struct WeekHeroCard: View {
-    let summary: WeekHeroSummary
-    let onShowDay: (Date) -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 16) {
-                ProgressRing(fraction: summary.fraction) {
-                    Text("\(summary.done)/\(summary.total)")
-                        .font(.system(size: 18, weight: .bold))
-                        .tracking(-0.3)
-                        .monospacedDigit()
-                        .contentTransition(.numericText())
-                }
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel("This week")
-                .accessibilityValue("\(summary.done) of \(summary.total) done")
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("This week")
-                        .font(.footnote.weight(.medium))
-                        .foregroundStyle(Palette.secondaryText)
-                    Text("\(summary.remaining) to go")
-                        .font(.title.bold())
-                        .tracking(-0.5)
-                        .contentTransition(.numericText())
-                    Text(summary.dueTodayText)
-                        .font(.subheadline)
-                        .foregroundStyle(Palette.secondaryText)
-                }
-                .accessibilityElement(children: .combine)
-            }
-
-            Rectangle()
-                .fill(Palette.hairline)
-                .frame(height: 1)
-                .accessibilityHidden(true)
-
-            HStack(spacing: 0) {
-                ForEach(summary.days, id: \.date) { day in
-                    Button { onShowDay(day.date) } label: {
-                        StripDay(day: day)
-                    }
-                    .buttonStyle(.pressable)
-                    .accessibilityLabel(WeekHeroSummary.accessibilityLabel(for: day))
-                    .accessibilityHint("Opens this day in Calendar")
-                }
-            }
-        }
-        .padding(.horizontal, 18)
-        .padding(.top, 18)
-        .padding(.bottom, 14)
-        // No implicit animation here: changes arrive inside the toggle's withAnimation, and a
-        // second transaction on the same glass logs "glassEffect() tried to update multiple times".
-        .glassCard(cornerRadius: 28)
-    }
-}
-
-private struct StripDay: View {
-    let day: WeekHeroSummary.Day
-
-    var body: some View {
-        VStack(spacing: 4) {
-            Text(day.date.formatted(.dateTime.weekday(.narrow)))
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(Palette.secondaryText)
-            Text(day.date.formatted(.dateTime.day()))
-                .font(.subheadline.weight(day.isToday ? .bold : .medium))
-                .foregroundStyle(day.isToday ? Palette.onAccent : (day.isPast ? Palette.mutedNumber : Palette.text))
-                .frame(width: 34, height: 34)
-                .background {
-                    if day.isToday { Circle().fill(Palette.accent) }
-                }
-            HStack(spacing: 3) {
-                ForEach(day.dots.prefix(4).enumerated(), id: \.offset) { _, color in
-                    Circle()
-                        .fill(color?.color ?? CourseColor.graphite.color)
-                        .frame(width: 5, height: 5)
-                }
-            }
-            .frame(height: 5)
-        }
-        .frame(maxWidth: .infinity, minHeight: 44)
-        .contentShape(.rect)
     }
 }
 

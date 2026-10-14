@@ -43,7 +43,12 @@ struct CoursesView: View {
                     }
 
                     if courses.isEmpty {
-                        emptyState
+                        ContentUnavailableView {
+                            Label("No Courses", appIcon: .courses)
+                        } description: {
+                            Text("Add a course, or import a syllabus to create one with its assignments.")
+                        }
+                        .glassCard(cornerRadius: 26)
                     } else {
                         GlassGroup {
                             ForEach(summaries.enumerated(), id: \.element.course.id) { index, item in
@@ -57,7 +62,7 @@ struct CoursesView: View {
                     }
 
                     if !unassigned.isEmpty {
-                        unassignedRow(count: unassigned.count)
+                        UnassignedRow(count: unassigned.count) { isAssigning = true }
                     }
                 }
                 .padding(.horizontal, 20)
@@ -71,92 +76,6 @@ struct CoursesView: View {
             .sheet(isPresented: $isAdding) { CourseEditorSheet() }
             .sheet(isPresented: $isImporting) { SyllabusImportSheet() }
             .sheet(isPresented: $isAssigning) { AssignToCourseSheet() }
-        }
-    }
-
-    private var emptyState: some View {
-        ContentUnavailableView {
-            Label("No Courses", appIcon: .courses)
-        } description: {
-            Text("Add a course, or import a syllabus to create one with its assignments.")
-        }
-        .glassCard(cornerRadius: 26)
-    }
-
-    private func unassignedRow(count: Int) -> some View {
-        let text = count == 1 ? "1 assignment has no course" : "\(count) assignments have no course"
-        return Button { isAssigning = true } label: {
-            HStack(spacing: 12) {
-                AppIcon(.notes, size: 22)
-                    .foregroundStyle(Palette.secondaryText)
-                    .frame(width: 24)
-                Text(text)
-                    .font(.subheadline)
-                    .foregroundStyle(Palette.secondaryText)
-                Spacer(minLength: 8)
-                Text("Assign")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Palette.accentText)
-            }
-            .padding(.horizontal, 16)
-            .frame(minHeight: 56)
-            .contentShape(.rect)
-        }
-        .buttonStyle(.plain)
-        .glassCard(cornerRadius: 22, interactive: true)
-        .accessibilityLabel(text)
-        .accessibilityHint("Choose a course for each")
-    }
-}
-
-private struct CourseRow: View {
-    let course: Course
-    let summary: CourseSummary
-    @Environment(\.currentTime) private var now
-    @Environment(\.calendar) private var calendar
-
-    var body: some View {
-        HStack(spacing: 14) {
-            TintTile(content: .text(summary.initials), color: course.color)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(course.name)
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(Palette.text)
-                    .lineLimit(1)
-                Text(summary.detail(now: now, calendar: calendar))
-                    .font(.subheadline)
-                    .foregroundStyle(Palette.secondaryText)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            trailing
-        }
-        .padding(12)
-        .contentShape(.rect)
-        .accessibilityElement(children: .combine)
-        .accessibilityHint("Edit course")
-    }
-
-    @ViewBuilder
-    private var trailing: some View {
-        switch summary.state {
-        case .open(let count):
-            Text("\(count)")
-                .font(.subheadline.bold())
-                .foregroundStyle(Palette.onAccent)
-                .padding(.horizontal, 9)
-                .frame(minWidth: 28, minHeight: 28)
-                .background(course.color, in: .capsule)
-                .accessibilityLabel("\(count) to do")
-        case .caughtUp:
-            AppIcon(.check, size: 14, weight: 3)
-                .foregroundStyle(Palette.secondaryText)
-                .frame(width: 28, height: 28)
-                .background(Palette.faintFill, in: .circle)
-                .accessibilityLabel("All done")
-        case .noAssignments:
-            Color.clear.frame(width: 28, height: 28)
         }
     }
 }

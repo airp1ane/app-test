@@ -1,10 +1,6 @@
 import SwiftData
 import SwiftUI
 
-enum AppTab: Hashable {
-    case assignments, calendar, courses, streaks
-}
-
 /// The four tabs in the system Liquid Glass tab bar (with the app's own icons), plus app-wide
 /// celebrations when a streak or day is completed.
 struct RootView: View {
@@ -101,12 +97,6 @@ struct RootView: View {
     }
 }
 
-/// Restarts the toast's timeout when a new one appears or it's let go.
-private struct ToastTimer: Equatable {
-    let celebration: Celebration?
-    let isHeld: Bool
-}
-
 /// Waits for `delay`, then runs `clear`. A newer celebration (or a tap) cancels the task, and a
 /// cancelled wait must not clear the toast that replaced it.
 @MainActor
@@ -123,31 +113,6 @@ private let launchTime = Date.now
 extension EnvironmentValues {
     /// The time screens compare due dates against, kept by `RootView` (see `now` there).
     @Entry var currentTime: Date = launchTime
-}
-
-extension AppTab {
-    var title: String {
-        switch self {
-        case .assignments: "Assignments"
-        case .calendar: "Calendar"
-        case .courses: "Courses"
-        case .streaks: "Streaks"
-        }
-    }
-
-    var icon: AppIcon.Name {
-        switch self {
-        case .assignments: .assignments
-        case .calendar: .calendar
-        case .courses: .courses
-        case .streaks: .streaks
-        }
-    }
-
-    /// The tab bar item: the outline icon as a template image, tinted by the system bar.
-    var label: Label<Text, Image> {
-        Label(title, appIcon: icon)
-    }
 }
 
 extension RootView {
@@ -210,36 +175,6 @@ extension RootView {
         withAnimation(reduceMotion ? .easeInOut(duration: 0.2) : .spring(response: response, dampingFraction: 1)) {
             celebration = nil
         }
-    }
-}
-
-
-struct CelebrationToast: View {
-    let celebration: Celebration
-    @State private var bounce = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.calendar) private var calendar
-
-    var body: some View {
-        HStack(spacing: 12) {
-            AppIcon(celebration.icon, size: 26)
-                .foregroundStyle(Palette.streakOrange)
-                .scaleEffect(bounce || reduceMotion ? 1 : 0.6)
-                .animation(.spring(duration: 0.4, bounce: 0.5), value: bounce)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(celebration.title)
-                    .font(.subheadline.weight(.semibold))
-                Text(celebration.detail)
-                    .font(.footnote)
-                    .foregroundStyle(Palette.secondaryText)
-            }
-        }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 12)
-        .duskGlass(in: Capsule())
-        .onAppear { bounce = true }
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.updatesFrequently)
     }
 }
 
