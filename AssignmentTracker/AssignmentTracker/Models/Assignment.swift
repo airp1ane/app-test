@@ -49,7 +49,7 @@ final class Assignment {
         steps.sorted { $0.sortIndex < $1.sortIndex }
     }
 
-    var tint: Color {
+    @MainActor var tint: Color {
         // Neutral when there's no class, so it doesn't look like it belongs to a blue one.
         course?.color ?? CourseColor.graphite.color
     }
