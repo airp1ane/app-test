@@ -4,11 +4,11 @@ import SwiftUI
 struct PlanCard: View {
     let assignment: Assignment
     @Environment(\.currentTime) private var now
+    @Environment(\.calendar) private var calendar
 
     private var suggestedDay: Date {
         // The day before it's due, but never earlier than today.
-        let calendar = Calendar.current
-        let dayBefore = calendar.date(byAdding: .day, value: -1, to: calendar.startOfDay(for: assignment.dueDate))!
+        let dayBefore = calendar.adding(.day, -1, to: calendar.startOfDay(for: assignment.dueDate))
         return max(dayBefore, calendar.startOfDay(for: now))
     }
 
@@ -30,8 +30,8 @@ struct PlanCard: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 DatePicker(
                     "Work day",
-                    selection: Binding(get: { planned }, set: { assignment.plan(for: $0) }),
-                    in: Calendar.current.startOfDay(for: now)...,
+                    selection: Binding(get: { planned }, set: { assignment.plan(for: $0, calendar: calendar) }),
+                    in: calendar.startOfDay(for: now)...,
                     displayedComponents: .date
                 )
                 .labelsHidden()
@@ -45,11 +45,11 @@ struct PlanCard: View {
                         .frame(width: 44, height: 44)
                         .contentShape(.rect)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 .accessibilityLabel("Clear work day")
             } else {
                 Button {
-                    assignment.plan(for: suggestedDay)
+                    assignment.plan(for: suggestedDay, calendar: calendar)
                 } label: {
                     HStack(spacing: 12) {
                         VStack(alignment: .leading, spacing: 2) {
@@ -65,7 +65,7 @@ struct PlanCard: View {
                     }
                     .contentShape(.rect)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 .accessibilityHint("Plans it for the day before it’s due")
             }
         }
@@ -75,7 +75,6 @@ struct PlanCard: View {
     }
 
     private func planHint(for planned: Date) -> String {
-        let calendar = Calendar.current
         if planned > assignment.dueDate { return "After it’s due" }
         let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: planned), to: calendar.startOfDay(for: assignment.dueDate)).day ?? 0
         switch days {

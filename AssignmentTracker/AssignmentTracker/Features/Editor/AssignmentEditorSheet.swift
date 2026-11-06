@@ -7,7 +7,6 @@ struct AssignmentEditorSheet: View {
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.openURL) private var openURL
     @Query(sort: \Course.sortIndex) private var courses: [Course]
 
     @State private var title: String
@@ -42,14 +41,25 @@ struct AssignmentEditorSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    titleField
+                    LabeledFieldCard(label: "Title") {
+                        TextField("e.g. Problem Set 5", text: $title)
+                            .font(.title3.weight(.semibold))
+                            .focused($focusedField, equals: .title)
+                            .submitLabel(.done)
+                            .accessibilityLabel("Title")
+                    }
 
                     VStack(alignment: .leading, spacing: 8) {
                         SectionHeader("Course")
-                        CourseChips(courses: courses, selection: $course) { isAddingCourse = true }
+                        CourseChips(courses: courses, selection: $course, onAddCourse: addCourse)
                     }
 
-                    scheduleCard
+                    AssignmentScheduleCard(
+                        kind: $kind,
+                        dueDate: $dueDate,
+                        remindDayBefore: $remindDayBefore,
+                        notificationsBlocked: $notificationsBlocked
+                    )
 
                     VStack(alignment: .leading, spacing: 8) {
                         SectionHeader("Priority")
@@ -60,7 +70,12 @@ struct AssignmentEditorSheet: View {
                         .controlSize(.large)
                     }
 
-                    notesField
+                    LabeledFieldCard(label: "Notes") {
+                        TextField("Add details, links or steps", text: $notes, axis: .vertical)
+                            .lineLimit(3...10)
+                            .focused($focusedField, equals: .notes)
+                            .accessibilityLabel("Notes")
+                    }
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 8)
@@ -72,20 +87,14 @@ struct AssignmentEditorSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(role: .cancel) { dismiss() } label: { Label("Cancel", appIcon: .close) }
+                    Button(role: .cancel, action: cancel) { Label("Cancel", appIcon: .close) }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(role: .confirm, action: save) { Label("Save", appIcon: .check) }
                         .disabled(trimmedTitle.isEmpty)
                 }
             }
-            .onAppear {
-                // Only a new assignment gets a default class; editing keeps "no class" as is.
-                if assignment == nil {
-                    if course == nil { course = courses.first }
-                    focusedField = .title
-                }
-            }
+            .onAppear(perform: prepareNewAssignment)
             .task { notificationsBlocked = await ReminderScheduler.isDenied() }
             .sheet(isPresented: $isAddingCourse) {
                 CourseEditorSheet { course = $0 }
@@ -93,99 +102,22 @@ struct AssignmentEditorSheet: View {
         }
     }
 
-    // MARK: - Sections
-
-    private var titleField: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Title")
-                .font(.footnote.weight(.medium))
-                .foregroundStyle(Palette.secondaryText)
-            TextField("e.g. Problem Set 5", text: $title)
-                .font(.title3.weight(.semibold))
-                .focused($focusedField, equals: .title)
-                .submitLabel(.done)
-                .accessibilityLabel("Title")
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .glassCard()
-    }
-
-    private var scheduleCard: some View {
-        VStack(spacing: 0) {
-            HStack {
-                RowLabel("Type", icon: kind.icon)
-                Spacer()
-                Picker("Type", selection: $kind) {
-                    ForEach(AssignmentKind.allCases) { Label($0.label, appIcon: $0.icon).tag($0) }
-                }
-                .pickerStyle(.menu)
-                .labelsHidden()
-            }
-            .frame(minHeight: 52)
-
-            Divider()
-
-            DatePicker(selection: $dueDate, displayedComponents: .date) {
-                RowLabel("Due date", icon: .calendar)
-            }
-            .frame(minHeight: 52)
-
-            Divider()
-
-            DatePicker(selection: $dueDate, displayedComponents: .hourAndMinute) {
-                RowLabel("Time", icon: .clock)
-            }
-            .frame(minHeight: 52)
-
-            Divider()
-
-            Toggle(isOn: $remindDayBefore) {
-                RowLabel("Remind me a day before", icon: .reminder)
-            }
-            .tint(Palette.onTimeGreen)
-            .frame(minHeight: 52)
-            .onChange(of: remindDayBefore) { _, isOn in
-                guard isOn else { notificationsBlocked = false; return }
-                Task { notificationsBlocked = !(await ReminderScheduler.requestAuthorization()) }
-            }
-
-            if notificationsBlocked && remindDayBefore {
-                Button {
-                    if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
-                } label: {
-                    Label { Text("Notifications are off for this app. Turn them on in Settings.") } icon: { AppIcon(.reminder, size: 16) }
-                        .font(.footnote)
-                        .foregroundStyle(Palette.warning)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.bottom, 10)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 4)
-        .glassCard()
-    }
-
-    private var notesField: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Notes")
-                .font(.footnote.weight(.medium))
-                .foregroundStyle(Palette.secondaryText)
-            TextField("Add details, links or steps", text: $notes, axis: .vertical)
-                .lineLimit(3...10)
-                .focused($focusedField, equals: .notes)
-                .accessibilityLabel("Notes")
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .glassCard()
-    }
-
     // MARK: - Actions
+
+    /// Only a new assignment gets a default class; editing keeps "no class" as is.
+    private func prepareNewAssignment() {
+        guard assignment == nil else { return }
+        if course == nil { course = courses.first }
+        focusedField = .title
+    }
+
+    private func addCourse() {
+        isAddingCourse = true
+    }
+
+    private func cancel() {
+        dismiss()
+    }
 
     private func save() {
         let target: Assignment

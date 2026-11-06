@@ -10,6 +10,7 @@ struct AssignmentRow: View {
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.currentTime) private var now
+    @Environment(\.calendar) private var calendar
 
     private var isOverdue: Bool {
         !assignment.isCompleted && assignment.dueDate < now
@@ -22,7 +23,7 @@ struct AssignmentRow: View {
                     .frame(width: 44, height: 44)
                     .contentShape(.rect)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
             .accessibilityLabel(assignment.isCompleted
                 ? "Mark \(assignment.title) as not done"
                 : "Mark \(assignment.title) as done")
@@ -52,11 +53,10 @@ struct AssignmentRow: View {
                             AppIcon(.plan, size: 14)
                                 .foregroundStyle(Palette.accentText)
                                 .accessibilityLabel("Planned for \(planned.plannedLabel())")
-                                .accessibilityHidden(false)
                         }
                         if let tag {
                             Text(tag)
-                                .font(.caption2.weight(.semibold))
+                                .font(.caption.weight(.semibold))
                                 .foregroundStyle(Palette.accentText)
                                 .padding(.horizontal, 7)
                                 .padding(.vertical, 2)
@@ -70,7 +70,7 @@ struct AssignmentRow: View {
                 .padding(.vertical, 8)
                 .contentShape(.rect)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
         }
         .padding(.leading, 4)
         .padding(.trailing, 12)
@@ -83,8 +83,8 @@ struct AssignmentRow: View {
             }
             if !assignment.isCompleted {
                 Menu {
-                    Button("Today") { assignment.plan(for: .now) }
-                    Button("Tomorrow") { assignment.plan(for: Calendar.current.date(byAdding: .day, value: 1, to: .now)) }
+                    Button("Today") { assignment.plan(for: now, calendar: calendar) }
+                    Button("Tomorrow") { assignment.plan(for: calendar.date(byAdding: .day, value: 1, to: now), calendar: calendar) }
                     if assignment.plannedDate != nil {
                         Button("Clear Plan", role: .destructive) { assignment.plan(for: nil) }
                     }
@@ -95,22 +95,6 @@ struct AssignmentRow: View {
             // No delete glyph in the app's icon set; SF Symbol fallback.
             Button("Delete", systemImage: "trash", role: .destructive) {
                 assignment.delete(from: modelContext)
-            }
-        }
-    }
-}
-
-/// Assignments as one grouped glass panel with inset hairlines (54pt in, 12pt from the right).
-struct AssignmentGroup: View {
-    let assignments: [Assignment]
-    /// A tag per row, keyed by assignment (e.g. "Planned").
-    var tag: (Assignment) -> String? = { _ in nil }
-
-    var body: some View {
-        GlassGroup {
-            ForEach(Array(assignments.enumerated()), id: \.element.id) { index, assignment in
-                if index > 0 { InsetDivider(leading: 54) }
-                AssignmentRow(assignment: assignment, tag: tag(assignment))
             }
         }
     }

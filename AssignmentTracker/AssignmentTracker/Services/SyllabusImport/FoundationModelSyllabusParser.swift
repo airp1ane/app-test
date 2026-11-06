@@ -78,7 +78,8 @@ nonisolated struct FoundationModelSyllabusParser {
         return (items, termStartText)
     }
 
-    /// One request, split in half and retried when the passage is too long for the model.
+    /// One request, split in half and retried when the passage is too long for the model or
+    /// trips a guardrail, so the rest of the passage still gets read.
     private static func generate(_ chunk: String, depth: Int = 0) async throws -> [GeneratedSyllabus] {
         // A fresh session per request keeps each one inside the context window.
         let session = LanguageModelSession(instructions: instructions)
@@ -89,7 +90,7 @@ nonisolated struct FoundationModelSyllabusParser {
                 options: GenerationOptions(samplingMode: .greedy)
             )
             return [response.content]
-        } catch LanguageModelSession.GenerationError.exceededContextWindowSize where depth < 2 {
+        } catch let error as LanguageModelSession.GenerationError where depth < 2 && error.isWorthSplitting {
             let halves = halve(chunk)
             guard halves.count == 2 else { throw ChunkFailure() }
             var results: [GeneratedSyllabus] = []
@@ -119,19 +120,24 @@ nonisolated struct FoundationModelSyllabusParser {
         Copy titles and dates exactly as written. Never calculate or guess dates.
         """
 
-    /// Splits at line breaks. Each chunk after the first repeats the latest "Week N" header
-    /// so weekday-only lines keep their week.
+    /// Splits at line breaks. Each chunk after the first repeats the latest "Week N" header and
+    /// date heading ("Friday, October 9") so the lines under them keep their date.
     static func chunks(of text: String) -> [String] {
+        let finder = SyllabusDateResolver()
         var chunks: [String] = []
         var current = ""
         var lastWeekHeader: String?
-        for line in text.components(separatedBy: .newlines) {
+        var lastDateHeading: String?
+        for line in text.components(separatedBy: .newlines).flatMap(pieces(of:)) {
             if current.count + line.count > chunkSize, !current.isEmpty {
                 chunks.append(current)
-                current = lastWeekHeader.map { "\($0)\n" } ?? ""
+                current = [lastWeekHeader, lastDateHeading].compactMap { $0.map { "\($0)\n" } }.joined()
             }
             if line.range(of: #"^\s*(week|wk\.?)\s*\d"#, options: [.regularExpression, .caseInsensitive]) != nil {
                 lastWeekHeader = line
+                lastDateHeading = nil
+            } else if RuleBasedSyllabusParser.dateHeading(in: line, finder: finder) != nil {
+                lastDateHeading = line
             }
             current += line + "\n"
         }
@@ -139,14 +145,44 @@ nonisolated struct FoundationModelSyllabusParser {
         return chunks
     }
 
+    /// A line longer than a chunk (a paragraph with no line breaks) split at sentence ends, or
+    /// at spaces when a sentence is too long too, since `generate` can only halve at line breaks.
+    static func pieces(of line: String) -> [String] {
+        guard line.count > chunkSize else { return [line] }
+        var pieces: [String] = []
+        var current = ""
+        for word in line.split(separator: " ") {
+            if !current.isEmpty, current.count + word.count + 1 > chunkSize {
+                pieces.append(current)
+                current = ""
+            }
+            current += current.isEmpty ? String(word) : " \(word)"
+            // Past halfway, end the piece at the next sentence end.
+            if word.hasSuffix("."), current.count > chunkSize / 2 {
+                pieces.append(current)
+                current = ""
+            }
+        }
+        if !current.isEmpty { pieces.append(current) }
+        return pieces
+    }
+
     /// Drops items the source text doesn't back up, so a hallucinated title can't slip through.
     static func detectedItem(from item: GeneratedItem, source: String) -> DetectedItem? {
         let title = item.title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard title.count >= 2 else { return nil }
-        let words = RuleBasedSyllabusParser.normalized(title).split(separator: " ").filter { $0.count > 2 }
+        let normalizedTitle = RuleBasedSyllabusParser.normalized(title)
         let normalizedSource = RuleBasedSyllabusParser.normalized(source)
-        let found = words.filter { normalizedSource.contains($0) }
-        guard !words.isEmpty, Double(found.count) / Double(words.count) >= 0.5 else { return nil }
+        let sourceWords = Set(normalizedSource.split(separator: " ").map(String.init))
+        let words = normalizedTitle.split(separator: " ").filter { $0.count > 2 }
+        if words.isEmpty {
+            // "PS 3", "HW 1": too short to check word by word, so they must appear as written.
+            guard !normalizedTitle.isEmpty, " \(normalizedSource) ".contains(" \(normalizedTitle) ") else { return nil }
+        } else {
+            // Whole words, so "lab" doesn't match inside "syllabus".
+            let found = words.filter { sourceWords.contains(String($0)) }
+            guard Double(found.count) / Double(words.count) >= 0.5 else { return nil }
+        }
 
         let dateText = item.dateText.trimmingCharacters(in: .whitespacesAndNewlines)
         let rawWeight = item.weight.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -158,10 +194,40 @@ nonisolated struct FoundationModelSyllabusParser {
             title: title,
             kind: item.kind.assignmentKind,
             dateText: dateText.isEmpty ? nil : dateText,
+            dateFoundInSource: dateText.isEmpty || sourceBacks(dateText: dateText, in: source),
             weight: weight,
             notes: item.details.trimmingCharacters(in: .whitespacesAndNewlines)
         )
     }
+
+    /// True when every number, month and weekday in the model's date also appears in the source.
+    /// Its parts can sit on different lines ("Week 3" header, "Fri: Quiz 1"), so they're checked
+    /// separately; a reworded ("10/12" → "Oct 12") or invented date fails.
+    static func sourceBacks(dateText: String, in source: String) -> Bool {
+        let sourceNumbers = Set(numbers(in: source))
+        let sourceNames = Set(RuleBasedSyllabusParser.normalized(source).split(separator: " ").compactMap(calendarName))
+        let words = RuleBasedSyllabusParser.normalized(dateText).split(separator: " ")
+        return numbers(in: dateText).allSatisfy(sourceNumbers.contains)
+            && words.compactMap(calendarName).allSatisfy(sourceNames.contains)
+    }
+
+    /// Digit runs as numbers, so "09" matches "9" and "31st" matches "31".
+    private static func numbers(in text: String) -> [Int] {
+        text.split { !$0.isNumber }.compactMap { Int($0) }
+    }
+
+    /// The three-letter stem of a month or weekday name or abbreviation ("october", "oct",
+    /// "thurs" → "oct", "oct", "thu"). Other words ("monitor") give nil.
+    private static func calendarName(_ word: Substring) -> String? {
+        guard word.count >= 3, calendarNames.contains(where: { $0.hasPrefix(word) }) else { return nil }
+        return String(word.prefix(3))
+    }
+
+    private static let calendarNames = [
+        "january", "february", "march", "april", "may", "june", "july", "august", "september",
+        "october", "november", "december",
+        "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
+    ]
 
     /// True when a single line names the item and gives the weight. The model tends to copy a
     /// category's total ("Problem Sets (5) … 25%") onto every member.
@@ -212,6 +278,17 @@ nonisolated enum GeneratedKind {
         case .quiz: .quiz
         case .project: .project
         case .reading: .reading
+        }
+    }
+}
+
+private extension LanguageModelSession.GenerationError {
+    /// Errors a shorter passage can avoid: too long for the context window, or a guardrail
+    /// tripped by one part of it.
+    var isWorthSplitting: Bool {
+        switch self {
+        case .exceededContextWindowSize, .guardrailViolation: true
+        default: false
         }
     }
 }

@@ -4,7 +4,7 @@ A SwiftUI app for iOS 26 and later that tracks class assignments. It uses Liquid
 
 ## Look and feel
 
-- **Dusk theme:** a violet palette defined once as semantic tokens in `DesignSystem/Palette.swift`, each with a light and dark value: background, text levels, accent, ring gradient, glass, and status colors. Views use only these tokens.
+- **Dusk theme:** a violet palette named once as semantic tokens in `DesignSystem/Palette.swift`, backed by color sets in `Assets.xcassets/Dusk` (course colors in `Assets.xcassets/Course`), each with a light and dark value: background, text levels, accent, ring gradient, glass, and status colors. Views use only these tokens.
 - **Backdrop:** `DuskBackground` puts three soft glows behind every screen. Cards use Dusk-tinted Liquid Glass via `glassCard` / `duskGlass`, and solid accent buttons use `accentFill`.
 - **Icons:** one outline set on a 24pt grid with a 1.75 stroke, drawn from the design's SVG fragments by a small parser (`DesignSystem/SVGPath.swift`). Use `AppIcon(.calendar, size: 22)`, or `AppIcon.image(.check)` where SwiftUI needs an `Image` (menus).
 - **App icon:** regenerate it with `swift Tools/make_app_icon.swift`.

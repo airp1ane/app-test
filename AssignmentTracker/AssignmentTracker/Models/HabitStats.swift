@@ -97,7 +97,7 @@ nonisolated struct HabitStats: Equatable, Sendable {
             }
         }
         currentStreak = run
-        totalOnTime = settled.filter(\.isOnTime).count
+        totalOnTime = settled.count(where: \.isOnTime)
 
         earlyFinishes = counted.filter { record in
             guard let completedAt = record.completedAt else { return false }
@@ -107,11 +107,11 @@ nonisolated struct HabitStats: Equatable, Sendable {
         let monthAgo = calendar.date(byAdding: .day, value: -30, to: now)!
         // Settled work due in the last 30 days, plus anything already finished ahead of time.
         let recent = settled.filter { $0.dueDate >= monthAgo }
-        onTimeRate = recent.isEmpty ? nil : Double(recent.filter(\.isOnTime).count) / Double(recent.count)
+        onTimeRate = recent.isEmpty ? nil : Double(recent.count(where: \.isOnTime)) / Double(recent.count)
 
         let today = counted.filter { $0.dueDate >= startOfToday && $0.dueDate < tomorrow }
         dueToday = today.count
-        openToday = today.filter { $0.completedAt == nil }.count
+        openToday = today.count { $0.completedAt == nil }
 
         perfectWeeks = Self.perfectWeekCount(counted, now: now, calendar: calendar)
 
@@ -121,13 +121,11 @@ nonisolated struct HabitStats: Equatable, Sendable {
     }
 
     private static func perfectWeekCount(_ records: [CompletionRecord], now: Date, calendar: Calendar) -> Int {
-        var mondayCalendar = calendar
-        mondayCalendar.firstWeekday = 2
-        guard let thisWeek = mondayCalendar.dateInterval(of: .weekOfYear, for: now)?.start else { return 0 }
+        guard let thisWeek = calendar.mondayWeekStart(for: now) else { return 0 }
         let byWeek = Dictionary(grouping: records.filter { $0.dueDate < thisWeek }) {
-            mondayCalendar.dateInterval(of: .weekOfYear, for: $0.dueDate)?.start ?? $0.dueDate
+            calendar.mondayWeekStart(for: $0.dueDate) ?? $0.dueDate
         }
-        return byWeek.values.filter { $0.allSatisfy(\.isOnTime) }.count
+        return byWeek.values.count { $0.allSatisfy(\.isOnTime) }
     }
 
     // MARK: - Rewards
@@ -169,9 +167,7 @@ nonisolated struct HabitStats: Equatable, Sendable {
 
     /// Monday to Sunday of the week containing `now`.
     func weekDays(now: Date = .now, calendar: Calendar = .current) -> [WeekDayStatus] {
-        var mondayCalendar = calendar
-        mondayCalendar.firstWeekday = 2
-        guard let start = mondayCalendar.dateInterval(of: .weekOfYear, for: now)?.start else { return [] }
+        guard let start = calendar.mondayWeekStart(for: now) else { return [] }
         let today = calendar.startOfDay(for: now)
         return (0..<7).map { offset in
             let day = calendar.startOfDay(for: calendar.date(byAdding: .day, value: offset, to: start)!)

@@ -45,3 +45,58 @@ struct SyllabusImportModelTests {
         #expect(model.candidates.map(\.isIncluded) == [false, true])
     }
 }
+
+/// Regression tests for the review list using the model's clock and calendar (ac3abe2).
+@MainActor
+struct ImportReferenceDateTests {
+    private func model(at reference: Date) -> SyllabusImportModel {
+        SyllabusImportModel(calendar: Fixtures.calendar, referenceDate: reference)
+    }
+
+    private func candidate(due: Date) -> ImportCandidate {
+        var candidate = ImportCandidateBuilder.candidates(
+            from: [DetectedItem(title: "Quiz", kind: .quiz, dateText: nil)],
+            resolver: model(at: Fixtures.today).resolver, existing: []
+        )[0]
+        candidate.dueDate = due
+        return candidate
+    }
+
+    @Test func pastIsJudgedAgainstTheModelsDayNotTheRealClock() {
+        // The reference day is in the past compared with the real clock, so the old
+        // `candidate.isPast()` (which used .now) called everything past.
+        let model = model(at: Fixtures.date(2026, 9, 29, 10, 0))
+        #expect(!model.isPast(candidate(due: Fixtures.date(2026, 9, 30, 9, 0))))
+        #expect(!model.isPast(candidate(due: Fixtures.date(2026, 9, 29, 8, 0))))
+        #expect(model.isPast(candidate(due: Fixtures.date(2026, 9, 28, 23, 59))))
+    }
+
+    @Test func sheetOpenedJustBeforeMidnightKeepsItsOwnDay() {
+        // Opened at 23:30; the list may be rebuilt after midnight, but the import day stays put.
+        let model = model(at: Fixtures.date(2026, 9, 29, 23, 30))
+        #expect(!model.isPast(candidate(due: Fixtures.date(2026, 9, 29, 0, 30))))
+        #expect(model.isPast(candidate(due: Fixtures.date(2026, 9, 28, 20, 0))))
+        #expect(model.startOfReferenceDay == Fixtures.date(2026, 9, 29))
+    }
+
+    @Test func termStartDefaultIsStartOfTheReferenceDayInTheModelsCalendar() {
+        let model = model(at: Fixtures.date(2026, 1, 15, 22, 0))
+        #expect(model.startOfReferenceDay == Fixtures.calendar.startOfDay(for: Fixtures.date(2026, 1, 15, 22, 0)))
+        #expect(model.startOfReferenceDay != Calendar.current.startOfDay(for: .now))
+    }
+}
+
+/// Regression tests for newline-only text in the candidate editor (89b955f).
+struct CandidateTextTests {
+    @Test func newlineOnlyAndSpaceOnlyTextIsBlank() {
+        #expect(CandidateText.isBlank(""))
+        #expect(CandidateText.isBlank("   "))
+        #expect(CandidateText.isBlank("\n"))
+        #expect(CandidateText.isBlank(" \n\t\r\n "))
+    }
+
+    @Test func realTextIsNotBlank() {
+        #expect(!CandidateText.isBlank("Quiz 1"))
+        #expect(!CandidateText.isBlank("\n Quiz \n"))
+    }
+}

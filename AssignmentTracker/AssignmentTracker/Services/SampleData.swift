@@ -11,9 +11,14 @@ enum SampleData {
         guard !defaults.bool(forKey: seededKey) else { return }
         defaults.set(true, forKey: seededKey)
         // Installs from before this flag existed already have their data.
-        let courseCount = (try? context.fetchCount(FetchDescriptor<Course>())) ?? 0
-        guard courseCount == 0 else { return }
+        guard shouldSeedEmptyStore(courseCount: { try context.fetchCount(FetchDescriptor<Course>()) }) else { return }
         insert(into: context)
+    }
+
+    /// Whether the store counts as empty. A count that can't be read means no: don't risk adding
+    /// samples to a real store.
+    static func shouldSeedEmptyStore(courseCount: () throws -> Int) -> Bool {
+        (try? courseCount()) == 0
     }
 
     private static let duskMigrationKey = "didMigrateDuskCourseColors"

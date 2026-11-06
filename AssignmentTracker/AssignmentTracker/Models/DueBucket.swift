@@ -16,10 +16,6 @@ enum DueBucket: Int, CaseIterable, Identifiable {
         }
     }
 
-    static func of(_ assignment: Assignment, now: Date = .now, calendar: Calendar = .current) -> DueBucket {
-        of(dueDate: assignment.dueDate, isCompleted: assignment.isCompleted, in: WeekWindow(now: now, calendar: calendar))
-    }
-
     /// Bucketing against a window built once, for grouping a whole list.
     nonisolated static func of(dueDate due: Date, isCompleted: Bool, in window: WeekWindow) -> DueBucket {
         if due < window.startOfToday { return isCompleted ? .earlier : .overdue }
@@ -44,6 +40,32 @@ nonisolated struct WeekWindow {
 
     func contains(_ date: Date) -> Bool {
         date >= startOfToday && date < end
+    }
+}
+
+nonisolated extension Calendar {
+    /// Start of the Monday-to-Sunday week containing `date`, whatever this calendar's
+    /// `firstWeekday` is. Other settings (time zone, `minimumDaysInFirstWeek`) are kept.
+    func mondayWeekStart(for date: Date) -> Date? {
+        var mondayCalendar = self
+        mondayCalendar.firstWeekday = 2
+        return mondayCalendar.dateInterval(of: .weekOfYear, for: date)?.start
+    }
+
+    /// `date` moved by `value` units. Adding days, weeks or months to a real date doesn't fail in
+    /// practice, so returning `date` unchanged is only a defensive fallback.
+    func adding(_ component: Component, _ value: Int, to date: Date) -> Date {
+        self.date(byAdding: component, value: value, to: date) ?? date
+    }
+
+    /// Start of the day, week or month containing `date` (falling back to the start of its day).
+    func start(of component: Component, for date: Date) -> Date {
+        dateInterval(of: component, for: date)?.start ?? startOfDay(for: date)
+    }
+
+    /// How many days the month containing `date` has.
+    func daysInMonth(of date: Date) -> Int {
+        range(of: .day, in: .month, for: date)?.count ?? 30
     }
 }
 

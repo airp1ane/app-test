@@ -18,5 +18,5 @@ final class Course {
         self.sortIndex = sortIndex
     }
 
-    var color: Color { colorToken.color }
+    @MainActor var color: Color { colorToken.color }
 }

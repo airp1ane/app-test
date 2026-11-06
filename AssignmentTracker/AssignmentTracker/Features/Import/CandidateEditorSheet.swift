@@ -25,87 +25,22 @@ struct CandidateEditorSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     if original.dateText != nil || original.reviewReason != nil {
-                        syllabusCard
+                        SyllabusQuoteCard(candidate: original)
                     }
 
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Title")
-                            .font(.footnote.weight(.medium))
-                            .foregroundStyle(Palette.secondaryText)
+                    LabeledFieldCard(label: "Title") {
                         TextField("e.g. Problem Set 3", text: $draft.title)
                             .font(.title3.weight(.semibold))
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .glassCard()
 
-                    VStack(spacing: 0) {
-                        HStack {
-                            RowLabel("Type", icon: draft.kind.icon)
-                            Spacer()
-                            // Outside a Form a menu picker shows only its button, so label it here.
-                            Picker("Type", selection: $draft.kind) {
-                                ForEach(AssignmentKind.allCases) { kind in
-                                    Label(kind.label, appIcon: kind.icon).tag(kind)
-                                }
-                            }
-                            .pickerStyle(.menu)
-                            .labelsHidden()
-                        }
-                        .frame(minHeight: 52)
+                    CandidateDetailsCard(draft: $draft, hasDate: $hasDate, date: $date)
 
-                        Divider()
-                        Toggle(isOn: $hasDate.animation(.snappy)) {
-                            RowLabel("Due date", icon: .calendar)
-                        }
-                        .tint(Palette.onTimeGreen)
-                        .frame(minHeight: 52)
-
-                        if hasDate {
-                            Divider()
-                            DatePicker(selection: $date, displayedComponents: .date) {
-                                RowLabel("Day", icon: .calendar)
-                            }
-                            .frame(minHeight: 52)
-                            Divider()
-                            DatePicker(selection: $date, displayedComponents: .hourAndMinute) {
-                                RowLabel("Time", icon: .clock)
-                            }
-                            .frame(minHeight: 52)
-                        }
-
-                        Divider()
-                        HStack {
-                            RowLabel("Weight", icon: .badge)
-                            TextField("e.g. 15%", text: Binding(
-                                get: { draft.weight ?? "" },
-                                set: { draft.weight = $0.trimmingCharacters(in: .whitespaces).isEmpty ? nil : $0 }
-                            ))
-                            .multilineTextAlignment(.trailing)
-                        }
-                        .frame(minHeight: 52)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 4)
-                    .glassCard()
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Notes")
-                            .font(.footnote.weight(.medium))
-                            .foregroundStyle(Palette.secondaryText)
+                    LabeledFieldCard(label: "Notes") {
                         TextField("Add details", text: $draft.notes, axis: .vertical)
                             .lineLimit(2...8)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .glassCard()
 
-                    Button(role: .destructive) {
-                        onDelete()
-                        dismiss()
-                    } label: {
+                    Button(role: .destructive, action: remove) {
                         // No delete glyph in the app's icon set; SF Symbol fallback.
                         Label("Remove from Import", systemImage: "trash")
                             .font(.body.weight(.medium))
@@ -126,40 +61,25 @@ struct CandidateEditorSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(role: .cancel) {
-                        // A brand-new, untouched item is discarded rather than left blank.
-                        if original.title.isEmpty, draft.title.trimmingCharacters(in: .whitespaces).isEmpty { onDelete() }
-                        dismiss()
-                    } label: {
-                        Label("Cancel", appIcon: .close)
-                    }
+                    Button(role: .cancel, action: cancel) { Label("Cancel", appIcon: .close) }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(role: .confirm, action: save) { Label("Done", appIcon: .check) }
-                        .disabled(draft.title.trimmingCharacters(in: .whitespaces).isEmpty)
+                        .disabled(CandidateText.isBlank(draft.title))
                 }
             }
         }
     }
 
-    private var syllabusCard: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("In the syllabus")
-                .font(.footnote.weight(.medium))
-                .foregroundStyle(Palette.secondaryText)
-            if let text = original.dateText {
-                Text("“\(text)”")
-                    .font(.subheadline)
-            }
-            if let reason = original.reviewReason {
-                Label { Text(reason) } icon: { AppIcon(.info, size: 16) }
-                    .font(.footnote.weight(.medium))
-                    .foregroundStyle(Palette.warning)
-            }
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .glassCard()
+    private func remove() {
+        onDelete()
+        dismiss()
+    }
+
+    private func cancel() {
+        // A brand-new, untouched item is discarded rather than left blank.
+        if original.title.isEmpty, CandidateText.isBlank(draft.title) { onDelete() }
+        dismiss()
     }
 
     private func save() {
@@ -186,7 +106,7 @@ struct CandidateEditorSheet: View {
 
     private static func tomorrowEvening() -> Date {
         let calendar = Calendar.current
-        let tomorrow = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: .now))!
-        return calendar.date(bySettingHour: 23, minute: 59, second: 0, of: tomorrow)!
+        let tomorrow = calendar.adding(.day, 1, to: calendar.startOfDay(for: .now))
+        return calendar.date(bySettingHour: 23, minute: 59, second: 0, of: tomorrow) ?? tomorrow
     }
 }

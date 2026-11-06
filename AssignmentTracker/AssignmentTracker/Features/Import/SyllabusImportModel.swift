@@ -48,15 +48,15 @@ final class SyllabusImportModel {
     }
 
     var includedCount: Int {
-        candidates.filter { $0.isIncluded && $0.dueDate != nil }.count
+        candidates.count { $0.isIncluded && $0.dueDate != nil }
     }
 
     var pastIncludedCount: Int {
-        candidates.filter { $0.isIncluded && $0.isPast(relativeTo: referenceDate, calendar: calendar) }.count
+        candidates.count { $0.isIncluded && $0.isPast(relativeTo: referenceDate, calendar: calendar) }
     }
 
     var undatedCount: Int {
-        candidates.filter { $0.dueDate == nil }.count
+        candidates.count { $0.dueDate == nil }
     }
 
     /// Checks or unchecks every past (non-duplicate) item at once.
@@ -65,6 +65,17 @@ final class SyllabusImportModel {
         where candidates[index].isPast(relativeTo: referenceDate, calendar: calendar) && candidates[index].duplicateOf == nil {
             candidates[index].isIncluded = included
         }
+    }
+
+    /// Whether an item counts as already passed for this import. Uses the same day and calendar
+    /// as `pastIncludedCount` and `save(in:)`, so the review list agrees with them.
+    func isPast(_ candidate: ImportCandidate) -> Bool {
+        candidate.isPast(relativeTo: referenceDate, calendar: calendar)
+    }
+
+    /// Start of the import day; the default when the user sets the first day of classes.
+    var startOfReferenceDay: Date {
+        calendar.startOfDay(for: referenceDate)
     }
 
     /// Whether any item's date depends on the semester start.
@@ -133,7 +144,7 @@ final class SyllabusImportModel {
         fingerprint = extracted.fingerprint
         engine = analysis.engine
         alreadyImported = course?.importedSyllabusFingerprints.contains(extracted.fingerprint) ?? false
-        // Set without triggering re-resolution; candidates are built with it below.
+        // The didSet re-resolves the current candidates first; they're replaced just below.
         termStart = analysis.termStart
         candidates = ImportCandidateBuilder.candidates(from: analysis.items, resolver: resolver, existing: existingAssignments)
     }
@@ -141,7 +152,7 @@ final class SyllabusImportModel {
     // MARK: - Review edits
 
     func addCandidate() -> ImportCandidate.ID {
-        let tomorrow = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: referenceDate))!
+        let tomorrow = calendar.adding(.day, 1, to: calendar.startOfDay(for: referenceDate))
         var candidate = ImportCandidate(
             title: "", kind: .assignment,
             dueDate: calendar.date(bySettingHour: 23, minute: 59, second: 0, of: tomorrow),
@@ -180,7 +191,7 @@ final class SyllabusImportModel {
             let wasDuplicate = candidates[index].duplicateOf != nil
             candidates[index].duplicateOf = ImportCandidateBuilder.duplicate(of: candidates[index], in: existing, calendar: calendar)?.title
             if wasDuplicate != (candidates[index].duplicateOf != nil) {
-                candidates[index].isIncluded = ImportCandidateBuilder.defaultInclusion(for: candidates[index], resolver: resolver)
+                candidates[index].isIncluded = ImportCandidateBuilder.defaultInclusion(for: candidates[index])
             }
         }
     }
@@ -216,6 +227,9 @@ final class SyllabusImportModel {
         if !fingerprint.isEmpty, !course.importedSyllabusFingerprints.contains(fingerprint) {
             course.importedSyllabusFingerprints.append(fingerprint)
         }
+        // A whole import is too much to leave to autosave's timing. If this fails, the
+        // changes stay in the context and autosave tries again.
+        try? context.save()
         if remindDayBefore, !created.isEmpty {
             Task {
                 await ReminderScheduler.requestAuthorization()

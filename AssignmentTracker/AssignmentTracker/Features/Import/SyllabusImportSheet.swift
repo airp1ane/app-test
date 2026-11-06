@@ -43,7 +43,12 @@ struct SyllabusImportSheet: View {
 
                     VStack(alignment: .leading, spacing: 8) {
                         SectionHeader("Syllabus")
-                        sourceCard
+                        SyllabusSourceCard(
+                            photoSelection: $photoSelection,
+                            isEnabled: model.course != nil,
+                            onChooseFile: { isPickingFile = true },
+                            onScan: { isScanning = true }
+                        )
                         Text(model.course == nil
                              ? "Choose a class first."
                              : "PDF, Word (.docx), text or photos · up to \(ByteCountFormatter.string(fromByteCount: SyllabusTextExtractor.maxFileSize, countStyle: .file))")
@@ -128,103 +133,6 @@ struct SyllabusImportSheet: View {
             await work()
             importTask = nil
         }
-    }
-
-    private var sourceCard: some View {
-        VStack(spacing: 0) {
-            SourceRow(title: "Choose File", icon: .notes) { isPickingFile = true }
-            Divider()
-            PhotosPicker(selection: $photoSelection, maxSelectionCount: 10, matching: .images) {
-                // No photo glyph in the app's icon set; SF Symbol fallback.
-                SourceRowLabel(title: "Photo Library", fallbackSymbol: "photo.on.rectangle")
-            }
-            .buttonStyle(.plain)
-            if VNDocumentCameraViewController.isSupported {
-                Divider()
-                SourceRow(title: "Scan Document", icon: .scan) { isScanning = true }
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 4)
-        .glassCard()
-        .disabled(model.course == nil)
-        .opacity(model.course == nil ? 0.5 : 1)
-    }
-}
-
-private struct SourceRow: View {
-    let title: String
-    let icon: AppIcon.Name
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            SourceRowLabel(title: title, icon: icon)
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-private struct SourceRowLabel: View {
-    let title: String
-    var icon: AppIcon.Name?
-    var fallbackSymbol: String?
-
-    var body: some View {
-        HStack {
-            if let icon {
-                RowLabel(title, icon: icon)
-            } else {
-                RowLabel.SymbolFallback(title: title, systemImage: fallbackSymbol ?? "")
-            }
-            Spacer()
-            AppIcon(.forward, size: 16)
-                .foregroundStyle(Palette.mutedNumber)
-        }
-        .frame(minHeight: 52)
-        .contentShape(.rect)
-    }
-}
-
-private struct ErrorCard: View {
-    let error: SyllabusImportError
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            AppIcon(.info, size: 24)
-                .foregroundStyle(Palette.danger)
-            VStack(alignment: .leading, spacing: 4) {
-                Text(error.errorDescription ?? "Something went wrong.")
-                    .font(.subheadline.weight(.semibold))
-                if let suggestion = error.recoverySuggestion {
-                    Text(suggestion)
-                        .font(.footnote)
-                        .foregroundStyle(Palette.secondaryText)
-                }
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(16)
-        .glassCard()
-        .accessibilityElement(children: .combine)
-    }
-}
-
-private struct WorkingOverlay: View {
-    let message: String
-
-    var body: some View {
-        VStack(spacing: 14) {
-            ProgressView()
-                .controlSize(.large)
-            Text(message)
-                .font(.subheadline.weight(.medium))
-                .multilineTextAlignment(.center)
-        }
-        .padding(28)
-        .frame(maxWidth: 280)
-        .glassCard(cornerRadius: 28)
-        .accessibilityElement(children: .combine)
     }
 }
 

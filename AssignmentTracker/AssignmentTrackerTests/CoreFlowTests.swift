@@ -168,7 +168,7 @@ struct CoreFlowTests {
         }
         let grouped = Dictionary(grouping: items, by: bucket)
         func titles(_ b: DueBucket) -> Set<String> { Set((grouped[b] ?? []).map(\.title)) }
-        func open(_ b: DueBucket) -> Int { (grouped[b] ?? []).filter { !$0.isCompleted }.count }
+        func open(_ b: DueBucket) -> Int { (grouped[b] ?? []).count { !$0.isCompleted } }
 
         #expect(titles(.overdue) == ["overdue open", "overdue open 2"])
         #expect(titles(.earlier) == ["overdue done"])
@@ -319,5 +319,55 @@ struct CoreFlowTests {
         #expect(hero.done == 1)
         #expect(hero.remaining == 2)
         #expect(hero.dueToday == 1)
+    }
+}
+
+/// Regression tests for the celebration toast (bd21351): a replaced toast's timer must not clear
+/// the newer one.
+@MainActor
+struct CelebrationToastTimerTests {
+    /// Stands in for RootView's `celebration` state.
+    final class Toast {
+        var text: String?
+    }
+
+    @Test func clearsAfterTheDelay() async {
+        let toast = Toast()
+        toast.text = "first"
+        await clearAfterDelay(.milliseconds(10)) { toast.text = nil }
+        #expect(toast.text == nil)
+    }
+
+    @Test func replacedToastIsNotClearedByItsCancelledTimer() async {
+        let toast = Toast()
+        toast.text = "first"
+        let firstTimer = Task { await clearAfterDelay(.milliseconds(200)) { toast.text = nil } }
+
+        // A second celebration arrives within the delay: SwiftUI cancels the first timer and starts
+        // a new one.
+        toast.text = "second"
+        firstTimer.cancel()
+        let secondTimer = Task { await clearAfterDelay(.milliseconds(200)) { toast.text = nil } }
+
+        await firstTimer.value
+        #expect(toast.text == "second")
+
+        await secondTimer.value
+        #expect(toast.text == nil)
+    }
+}
+
+/// Regression tests for sample-data seeding (9ab0945): a failed count must not count as empty.
+@MainActor
+struct SeedDecisionTests {
+    private struct CountFailed: Error {}
+
+    @Test func seedsOnlyWhenTheStoreIsKnownToBeEmpty() {
+        #expect(SampleData.shouldSeedEmptyStore(courseCount: { 0 }))
+        #expect(!SampleData.shouldSeedEmptyStore(courseCount: { 3 }))
+    }
+
+    @Test func doesNotSeedWhenTheCountCannotBeRead() {
+        #expect(!SampleData.shouldSeedEmptyStore(courseCount: { throw CountFailed() }))
     }
 }

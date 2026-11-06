@@ -12,6 +12,8 @@ nonisolated struct ImportCandidate: Identifiable, Equatable, Sendable {
     var dateStatus: ResolvedDate.Status
     /// Once the person picks a date themselves, changing the semester start leaves it alone.
     var dateSetByUser = false
+    /// False when the syllabus doesn't back up the detected date, so it's flagged for review.
+    var dateFoundInSource = true
     var weight: String?
     var notes: String
     var isIncluded: Bool
@@ -48,8 +50,14 @@ nonisolated struct ImportCandidate: Identifiable, Equatable, Sendable {
         return dueDate < calendar.startOfDay(for: now)
     }
 
+    /// The weight as editable text: empty when there's none, and blank input clears it.
+    var weightText: String {
+        get { weight ?? "" }
+        set { weight = CandidateText.isBlank(newValue) ? nil : newValue }
+    }
+
     var suggestedPriority: Priority {
-        let percent = weight.flatMap { Double($0.replacingOccurrences(of: "%", with: "")) }
+        let percent = weight.flatMap { Double($0.replacing("%", with: "")) }
         if kind == .exam || (percent ?? 0) >= 20 { return .high }
         if kind == .reading { return .low }
         return .medium
@@ -71,9 +79,10 @@ nonisolated enum ImportCandidateBuilder {
     ) -> [ImportCandidate] {
         items.map { item in
             var candidate = ImportCandidate(title: item.title, kind: item.kind, dateText: item.dateText, weight: item.weight, notes: item.notes)
+            candidate.dateFoundInSource = item.dateFoundInSource
             resolve(&candidate, with: resolver)
             candidate.duplicateOf = duplicate(of: candidate, in: existing, calendar: resolver.calendar)?.title
-            candidate.isIncluded = defaultInclusion(for: candidate, resolver: resolver)
+            candidate.isIncluded = defaultInclusion(for: candidate)
             return candidate
         }
     }
@@ -85,7 +94,7 @@ nonisolated enum ImportCandidateBuilder {
             resolve(&candidates[index], with: resolver)
             // Items that just gained a date become importable.
             if !hadDate, candidates[index].dueDate != nil {
-                candidates[index].isIncluded = defaultInclusion(for: candidates[index], resolver: resolver)
+                candidates[index].isIncluded = defaultInclusion(for: candidates[index])
             }
         }
     }
@@ -99,9 +108,16 @@ nonisolated enum ImportCandidateBuilder {
         let resolved = resolver.resolve(text)
         candidate.dueDate = resolved.date
         candidate.dateStatus = resolved.status
+        guard !candidate.dateFoundInSource else { return }
+        let unverified = "Date not found as written in the syllabus"
+        switch resolved.status {
+        case .confident: candidate.dateStatus = .needsReview(unverified)
+        case .needsReview(let reason): candidate.dateStatus = .needsReview("\(reason) · \(unverified)")
+        case .missing: break
+        }
     }
 
-    static func defaultInclusion(for candidate: ImportCandidate, resolver: SyllabusDateResolver) -> Bool {
+    static func defaultInclusion(for candidate: ImportCandidate) -> Bool {
         candidate.dueDate != nil && candidate.duplicateOf == nil
     }
 

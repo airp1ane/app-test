@@ -21,7 +21,7 @@ struct CoursesView: View {
 
     private func subtitle(for summaries: [(course: Course, summary: CourseSummary)], unassigned: [Assignment]) -> String {
         // Open work in every course, plus open work with no course yet.
-        let toDo = summaries.reduce(0) { $0 + $1.summary.openCount } + unassigned.filter { !$0.isCompleted }.count
+        let toDo = summaries.reduce(0) { $0 + $1.summary.openCount } + unassigned.count { !$0.isCompleted }
         let courseWord = courses.count == 1 ? "course" : "courses"
         return "\(courses.count) \(courseWord) · \(toDo) to do"
     }
@@ -43,21 +43,26 @@ struct CoursesView: View {
                     }
 
                     if courses.isEmpty {
-                        emptyState
+                        ContentUnavailableView {
+                            Label("No Courses", appIcon: .courses)
+                        } description: {
+                            Text("Add a course, or import a syllabus to create one with its assignments.")
+                        }
+                        .glassCard(cornerRadius: 26)
                     } else {
                         GlassGroup {
-                            ForEach(Array(summaries.enumerated()), id: \.element.course.id) { index, item in
+                            ForEach(summaries.enumerated(), id: \.element.course.id) { index, item in
                                 if index > 0 { InsetDivider() }
                                 Button { editing = item.course } label: {
                                     CourseRow(course: item.course, summary: item.summary)
                                 }
-                                .buttonStyle(.plain)
+                                .buttonStyle(.pressable)
                             }
                         }
                     }
 
                     if !unassigned.isEmpty {
-                        unassignedRow(count: unassigned.count)
+                        UnassignedRow(count: unassigned.count) { isAssigning = true }
                     }
                 }
                 .padding(.horizontal, 20)
@@ -71,96 +76,6 @@ struct CoursesView: View {
             .sheet(isPresented: $isAdding) { CourseEditorSheet() }
             .sheet(isPresented: $isImporting) { SyllabusImportSheet() }
             .sheet(isPresented: $isAssigning) { AssignToCourseSheet() }
-        }
-    }
-
-    private var emptyState: some View {
-        VStack(spacing: 8) {
-            Text("No courses yet")
-                .font(.headline)
-            Text("Add a course, or import a syllabus to create one with its assignments.")
-                .font(.subheadline)
-                .foregroundStyle(Palette.secondaryText)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(24)
-        .glassCard(cornerRadius: 26)
-    }
-
-    private func unassignedRow(count: Int) -> some View {
-        let text = count == 1 ? "1 assignment has no course" : "\(count) assignments have no course"
-        return Button { isAssigning = true } label: {
-            HStack(spacing: 12) {
-                AppIcon(.notes, size: 22)
-                    .foregroundStyle(Palette.secondaryText)
-                    .frame(width: 24)
-                Text(text)
-                    .font(.subheadline)
-                    .foregroundStyle(Palette.secondaryText)
-                Spacer(minLength: 8)
-                Text("Assign")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Palette.accentText)
-            }
-            .padding(.horizontal, 16)
-            .frame(minHeight: 56)
-            .contentShape(.rect)
-        }
-        .buttonStyle(.plain)
-        .glassCard(cornerRadius: 22)
-        .accessibilityLabel(text)
-        .accessibilityHint("Choose a course for each")
-    }
-}
-
-private struct CourseRow: View {
-    let course: Course
-    let summary: CourseSummary
-    @Environment(\.currentTime) private var now
-
-    var body: some View {
-        HStack(spacing: 14) {
-            TintTile(content: .text(summary.initials), color: course.color)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(course.name)
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(Palette.text)
-                    .lineLimit(1)
-                Text(summary.detail(now: now))
-                    .font(.subheadline)
-                    .foregroundStyle(Palette.secondaryText)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            trailing
-        }
-        .padding(12)
-        .contentShape(.rect)
-        .accessibilityElement(children: .combine)
-        .accessibilityHint("Edit course")
-    }
-
-    @ViewBuilder
-    private var trailing: some View {
-        switch summary.state {
-        case .open(let count):
-            Text("\(count)")
-                .font(.subheadline.weight(.bold))
-                .foregroundStyle(Palette.onAccent)
-                .padding(.horizontal, 9)
-                .frame(minWidth: 28, minHeight: 28)
-                .background(course.color, in: .capsule)
-                .accessibilityLabel("\(count) to do")
-        case .caughtUp:
-            AppIcon(.check, size: 14, weight: 3)
-                .foregroundStyle(Palette.secondaryText)
-                .frame(width: 28, height: 28)
-                .background(Palette.faintFill, in: .circle)
-                .accessibilityLabel("All done")
-        case .noAssignments:
-            Color.clear.frame(width: 28, height: 28)
         }
     }
 }
