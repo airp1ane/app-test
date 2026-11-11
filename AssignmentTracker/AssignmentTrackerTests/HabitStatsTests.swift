@@ -70,6 +70,15 @@ struct HabitStatsTests {
         #expect(result.earlyFinishes == 1)
     }
 
+    @Test func earlyFinishNeedsAFullCalendarDay() {
+        // Due Sep 29 23:59: finishing Sep 28 23:59 is a day early, a minute later is not.
+        let result = stats([
+            record(due: 0, finished: day(-1, 23, 59)),
+            record(due: 0, finished: day(0, 0, 0)),
+        ])
+        #expect(result.earlyFinishes == 1)
+    }
+
     @Test func workAddedAfterItWasDueIsIgnored() {
         // Past syllabus items are imported already done: neither a win nor a loss.
         let imported = CompletionRecord(dueDate: day(-10), createdAt: day(0, 9), completedAt: day(0, 9))

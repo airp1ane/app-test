@@ -101,7 +101,10 @@ nonisolated struct HabitStats: Equatable, Sendable {
 
         earlyFinishes = counted.filter { record in
             guard let completedAt = record.completedAt else { return false }
-            return completedAt <= record.dueDate.addingTimeInterval(-24 * 3600)
+            // One calendar day early (23 or 25 real hours across a DST change).
+            let dayBefore = calendar.date(byAdding: .day, value: -1, to: record.dueDate)
+                ?? record.dueDate.addingTimeInterval(-24 * 3600)
+            return completedAt <= dayBefore
         }.count
 
         let monthAgo = calendar.date(byAdding: .day, value: -30, to: now)!
