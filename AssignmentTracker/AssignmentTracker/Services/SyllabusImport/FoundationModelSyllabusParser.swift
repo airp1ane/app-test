@@ -61,11 +61,12 @@ nonisolated struct FoundationModelSyllabusParser {
             try Task.checkCancellation()
             await progress(index, chunks.count)
             do {
+                let index = SourceIndex(chunk)
                 for generated in try await Self.generate(chunk) {
                     if termStartText == nil, !generated.firstDayOfClasses.isEmpty {
                         termStartText = generated.firstDayOfClasses
                     }
-                    items += generated.items.compactMap { Self.detectedItem(from: $0, source: chunk) }
+                    items += generated.items.compactMap { Self.detectedItem(from: $0, source: chunk, index: index) }
                 }
             } catch {
                 // A cancelled import isn't a failed chunk; stop rather than read the rest.
@@ -169,11 +170,28 @@ nonisolated struct FoundationModelSyllabusParser {
 
     /// Drops items the source text doesn't back up, so a hallucinated title can't slip through.
     static func detectedItem(from item: GeneratedItem, source: String) -> DetectedItem? {
+        detectedItem(from: item, source: source, index: SourceIndex(source))
+    }
+
+    /// The source text normalized once per chunk, so each item doesn't redo it.
+    nonisolated struct SourceIndex {
+        let normalized: String
+        let words: Set<String>
+        let lines: [(raw: String, normalized: String)]
+
+        init(_ source: String) {
+            normalized = RuleBasedSyllabusParser.normalized(source)
+            words = Set(normalized.split(separator: " ").map(String.init))
+            lines = source.components(separatedBy: .newlines).map { ($0, RuleBasedSyllabusParser.normalized($0)) }
+        }
+    }
+
+    static func detectedItem(from item: GeneratedItem, source: String, index: SourceIndex) -> DetectedItem? {
         let title = item.title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard title.count >= 2 else { return nil }
         let normalizedTitle = RuleBasedSyllabusParser.normalized(title)
-        let normalizedSource = RuleBasedSyllabusParser.normalized(source)
-        let sourceWords = Set(normalizedSource.split(separator: " ").map(String.init))
+        let normalizedSource = index.normalized
+        let sourceWords = index.words
         let words = normalizedTitle.split(separator: " ").filter { $0.count > 2 }
         if words.isEmpty {
             // "PS 3", "HW 1": too short to check word by word, so they must appear as written.
@@ -187,14 +205,14 @@ nonisolated struct FoundationModelSyllabusParser {
         let dateText = item.dateText.trimmingCharacters(in: .whitespacesAndNewlines)
         let rawWeight = item.weight.trimmingCharacters(in: .whitespacesAndNewlines)
         var weight = rawWeight.isEmpty ? nil : RuleBasedSyllabusParser.weight(in: rawWeight) ?? rawWeight
-        if let stated = weight, !lineStates(weight: stated, for: title, in: source) {
+        if let stated = weight, !lineStates(weight: stated, for: title, in: index) {
             weight = nil
         }
         return DetectedItem(
             title: title,
             kind: item.kind.assignmentKind,
             dateText: dateText.isEmpty ? nil : dateText,
-            dateFoundInSource: dateText.isEmpty || sourceBacks(dateText: dateText, in: source),
+            dateFoundInSource: dateText.isEmpty || sourceBacks(dateText: dateText, index: index, source: source),
             weight: weight,
             notes: item.details.trimmingCharacters(in: .whitespacesAndNewlines)
         )
@@ -204,8 +222,12 @@ nonisolated struct FoundationModelSyllabusParser {
     /// Its parts can sit on different lines ("Week 3" header, "Fri: Quiz 1"), so they're checked
     /// separately; a reworded ("10/12" → "Oct 12") or invented date fails.
     static func sourceBacks(dateText: String, in source: String) -> Bool {
+        sourceBacks(dateText: dateText, index: SourceIndex(source), source: source)
+    }
+
+    static func sourceBacks(dateText: String, index: SourceIndex, source: String) -> Bool {
         let sourceNumbers = Set(numbers(in: source))
-        let sourceNames = Set(RuleBasedSyllabusParser.normalized(source).split(separator: " ").compactMap(calendarName))
+        let sourceNames = Set(index.normalized.split(separator: " ").compactMap(calendarName))
         let words = RuleBasedSyllabusParser.normalized(dateText).split(separator: " ")
         return numbers(in: dateText).allSatisfy(sourceNumbers.contains)
             && words.compactMap(calendarName).allSatisfy(sourceNames.contains)
@@ -232,11 +254,17 @@ nonisolated struct FoundationModelSyllabusParser {
     /// True when a single line names the item and gives the weight. The model tends to copy a
     /// category's total ("Problem Sets (5) … 25%") onto every member.
     static func lineStates(weight: String, for title: String, in source: String) -> Bool {
+        lineStates(weight: weight, for: title, in: SourceIndex(source))
+    }
+
+    static func lineStates(weight: String, for title: String, in index: SourceIndex) -> Bool {
         let number = weight.filter { $0.isNumber || $0 == "." }
         let normalizedTitle = RuleBasedSyllabusParser.normalized(title)
         guard !number.isEmpty, !normalizedTitle.isEmpty else { return false }
-        return source.components(separatedBy: .newlines).contains { line in
-            line.contains(number) && RuleBasedSyllabusParser.normalized(line).contains(normalizedTitle)
+        // Whole words on the line, so "set" doesn't match inside "settings".
+        let paddedTitle = " \(normalizedTitle) "
+        return index.lines.contains { line in
+            line.raw.contains(number) && " \(line.normalized) ".contains(paddedTitle)
         }
     }
 }

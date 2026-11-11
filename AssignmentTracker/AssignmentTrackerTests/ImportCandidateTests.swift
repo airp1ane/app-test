@@ -133,6 +133,12 @@ struct FoundationModelParserHelpersTests {
         #expect(FoundationModelSyllabusParser.detectedItem(from: invented, source: source) == nil)
     }
 
+    @Test func weightIsKeptOnlyWhenTheLineHasTheTitleAsWholeWords() {
+        let source = "Problem Set 1: 5%\nSettings overview 20%"
+        #expect(FoundationModelSyllabusParser.lineStates(weight: "20%", for: "Set", in: source) == false)
+        #expect(FoundationModelSyllabusParser.lineStates(weight: "5%", for: "Problem Set 1", in: source))
+    }
+
     @Test func titleWordsMustBeWholeWords() {
         let item = GeneratedItem(title: "Lab Report", kind: .assignment, dateText: "", weight: "", details: "")
         #expect(FoundationModelSyllabusParser.detectedItem(from: item, source: "Course syllabus overview") == nil)
