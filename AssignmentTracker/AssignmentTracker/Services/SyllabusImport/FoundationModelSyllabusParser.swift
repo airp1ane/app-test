@@ -1,5 +1,6 @@
 import Foundation
 import FoundationModels
+import os
 
 /// Detects syllabus items with Apple's on-device language model (guided generation).
 ///
@@ -43,6 +44,8 @@ nonisolated struct FoundationModelSyllabusParser {
 
     struct ChunkFailure: Error {}
 
+    private static let logger = Logger(subsystem: "AssignmentTracker", category: "SyllabusImport")
+
     /// Reads the syllabus in chunks. A chunk that fails (a guardrail, or a response too long
     /// for the context window) is split and retried, and if it still fails it's skipped, so one
     /// bad passage can't discard what the other chunks found. Throws only if every chunk failed,
@@ -72,6 +75,7 @@ nonisolated struct FoundationModelSyllabusParser {
                 // A cancelled import isn't a failed chunk; stop rather than read the rest.
                 if error is CancellationError || Task.isCancelled { throw CancellationError() }
                 failures += 1
+                Self.logger.error("Syllabus chunk \(index + 1, privacy: .public) of \(chunks.count, privacy: .public) failed: \(String(describing: error), privacy: .public)")
             }
         }
         await progress(chunks.count, chunks.count)
@@ -105,10 +109,30 @@ nonisolated struct FoundationModelSyllabusParser {
     }
 
     private static func halve(_ chunk: String) -> [String] {
-        let lines = chunk.components(separatedBy: .newlines)
-        guard lines.count >= 2 else { return [chunk] }
+        let lines = chunk.components(separatedBy: .newlines).filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+        guard lines.count >= 2 else { return halveLine(chunk) }
         let middle = lines.count / 2
         return [lines[..<middle].joined(separator: "\n"), lines[middle...].joined(separator: "\n")]
+    }
+
+    /// Splits one long line near its middle, at a space, so a passage with no line breaks can
+    /// still shrink on retry. Returns the line unchanged when there's nowhere to split.
+    private static func halveLine(_ line: String) -> [String] {
+        let characters = Array(line)
+        guard characters.count >= 2 else { return [line] }
+        let middle = characters.count / 2
+        var split: Int?
+        var offset = 0
+        while offset <= middle {
+            if middle - offset > 0, characters[middle - offset].isWhitespace { split = middle - offset; break }
+            if middle + offset < characters.count, characters[middle + offset].isWhitespace { split = middle + offset; break }
+            offset += 1
+        }
+        let at = split ?? middle
+        let first = String(characters[..<at]).trimmingCharacters(in: .whitespaces)
+        let second = String(characters[at...]).trimmingCharacters(in: .whitespaces)
+        guard !first.isEmpty, !second.isEmpty else { return [line] }
+        return [first, second]
     }
 
     private static let instructions = """
@@ -127,12 +151,15 @@ nonisolated struct FoundationModelSyllabusParser {
         let finder = SyllabusDateResolver()
         var chunks: [String] = []
         var current = ""
+        var prefixLength = 0
         var lastWeekHeader: String?
         var lastDateHeading: String?
         for line in text.components(separatedBy: .newlines).flatMap(pieces(of:)) {
             if current.count + line.count > chunkSize, !current.isEmpty {
-                chunks.append(current)
+                // A chunk holding only the repeated headers has nothing to read; don't emit it.
+                if current.count > prefixLength { chunks.append(current) }
                 current = [lastWeekHeader, lastDateHeading].compactMap { $0.map { "\($0)\n" } }.joined()
+                prefixLength = current.count
             }
             if line.range(of: #"^\s*(week|wk\.?)\s*\d"#, options: [.regularExpression, .caseInsensitive]) != nil {
                 lastWeekHeader = line

@@ -117,6 +117,17 @@ struct FoundationModelParserHelpersTests {
         #expect(chunks.joined().contains("Fri: Quiz 12"))
     }
 
+    @Test func chunksSplitASingleOverlongLine() {
+        let sentence = "Read the assigned chapter and submit your notes before class. "
+        let text = String(repeating: sentence, count: 120)
+        let chunks = FoundationModelSyllabusParser.chunks(of: text)
+
+        #expect(text.count > FoundationModelSyllabusParser.chunkSize * 2)
+        #expect(chunks.count > 1)
+        #expect(chunks.allSatisfy { $0.count <= FoundationModelSyllabusParser.chunkSize + 1 })
+        #expect(chunks.allSatisfy { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty })
+    }
+
     @Test func dropsItemsNotInTheSource() {
         let source = "Oct 14: Essay 1 due\nOct 20: Quiz 2"
         let real = GeneratedItem(title: "Essay 1", kind: .assignment, dateText: "Oct 14", weight: "", details: "")
