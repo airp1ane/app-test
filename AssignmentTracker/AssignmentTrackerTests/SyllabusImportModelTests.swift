@@ -67,6 +67,19 @@ struct SyllabusImportModelTests {
         _ = container
     }
 
+    @Test func untitledAddedItemIsDiscardedButNamedOneIsKept() {
+        let model = SyllabusImportModel(calendar: Fixtures.calendar, referenceDate: Fixtures.today)
+        let blank = model.addCandidate()
+        let named = model.addCandidate()
+        model.candidates[1].title = "Lab report"
+        #expect(model.includedCount == 2)
+
+        model.discardIfUntitled(blank)
+        model.discardIfUntitled(named)
+        #expect(model.candidates.map(\.title) == ["Lab report"])
+        #expect(model.candidates[0].id == named)
+    }
+
     /// A course with an existing "Quiz 1", and an undated "Week 6, Thursday" candidate for it.
     private func modelWithExistingQuiz(due: Date) throws -> (ModelContainer, SyllabusImportModel) {
         let container = try ModelContainer(for: ModelContainer.schema, configurations: ModelConfiguration(isStoredInMemoryOnly: true))

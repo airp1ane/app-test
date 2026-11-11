@@ -172,6 +172,12 @@ final class SyllabusImportModel {
         candidates.removeAll { $0.id == id }
     }
 
+    /// Drops an added item that was never given a title, e.g. when its editor is swiped away,
+    /// so it isn't saved as an untitled assignment.
+    func discardIfUntitled(_ id: ImportCandidate.ID) {
+        candidates.removeAll { $0.id == id && CandidateText.isBlank($0.title) }
+    }
+
     func toggleIncluded(_ id: ImportCandidate.ID) {
         guard let index = candidates.firstIndex(where: { $0.id == id }), candidates[index].dueDate != nil else { return }
         candidates[index].isIncluded.toggle()

@@ -9,6 +9,8 @@ struct ImportReviewView: View {
 
     @Environment(\.modelContext) private var modelContext
     @State private var editing: ImportCandidate.ID?
+    /// The item "Add Item" just created, until its editor closes.
+    @State private var addedItem: ImportCandidate.ID?
     @State private var notificationsBlocked = false
 
     private enum ReviewGroup: CaseIterable {
@@ -92,7 +94,7 @@ struct ImportReviewView: View {
         .sheet(item: Binding(
             get: { editing.flatMap { id in model.candidates.first { $0.id == id } } },
             set: { editing = $0?.id }
-        )) { candidate in
+        ), onDismiss: discardUntitledAddedItem) { candidate in
             CandidateEditorSheet(candidate: candidate, onSave: update) {
                 model.delete(candidate.id)
             }
@@ -100,7 +102,16 @@ struct ImportReviewView: View {
     }
 
     private func addItem() {
-        editing = model.addCandidate()
+        let id = model.addCandidate()
+        addedItem = id
+        editing = id
+    }
+
+    /// Swiping the editor down skips Cancel, so a new item left untitled is removed here.
+    private func discardUntitledAddedItem() {
+        guard let id = addedItem else { return }
+        addedItem = nil
+        model.discardIfUntitled(id)
     }
 
     private func save() {
