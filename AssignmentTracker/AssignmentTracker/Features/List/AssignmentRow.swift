@@ -11,6 +11,7 @@ struct AssignmentRow: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.currentTime) private var now
     @Environment(\.calendar) private var calendar
+    @State private var isConfirmingDelete = false
 
     private var isOverdue: Bool {
         !assignment.isCompleted && assignment.dueDate < now
@@ -94,8 +95,20 @@ struct AssignmentRow: View {
             }
             // No delete glyph in the app's icon set; SF Symbol fallback.
             Button("Delete", systemImage: "trash", role: .destructive) {
+                isConfirmingDelete = true
+            }
+        }
+        // Same confirmation as the detail screen's Delete.
+        .confirmationDialog(
+            "Delete “\(assignment.title)”?",
+            isPresented: $isConfirmingDelete,
+            titleVisibility: .visible
+        ) {
+            Button("Delete Assignment", role: .destructive) {
                 assignment.delete(from: modelContext)
             }
+        } message: {
+            Text("This can’t be undone.")
         }
     }
 }
