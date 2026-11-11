@@ -44,6 +44,47 @@ struct SyllabusImportModelTests {
         model.setPastIncluded(false)
         #expect(model.candidates.map(\.isIncluded) == [false, true])
     }
+
+    /// An undated item matches an existing one on title alone; once the term start gives it
+    /// a date on another day, it's no longer a duplicate and becomes checked.
+    @Test func settingTermStartClearsAStaleDuplicate() throws {
+        let (container, model) = try modelWithExistingQuiz(due: Fixtures.date(2026, 10, 20, 9, 0))
+        #expect(model.candidates[0].duplicateOf == "Quiz 1")
+        #expect(!model.candidates[0].isIncluded)
+
+        model.termStart = Fixtures.fallStart
+        #expect(model.candidates[0].dueDate == Fixtures.date(2026, 10, 8, 23, 59))
+        #expect(model.candidates[0].duplicateOf == nil)
+        #expect(model.candidates[0].isIncluded)
+        _ = container
+    }
+
+    @Test func settingTermStartKeepsASameDayDuplicateUnchecked() throws {
+        let (container, model) = try modelWithExistingQuiz(due: Fixtures.date(2026, 10, 8, 9, 0))
+        model.termStart = Fixtures.fallStart
+        #expect(model.candidates[0].duplicateOf == "Quiz 1")
+        #expect(!model.candidates[0].isIncluded)
+        _ = container
+    }
+
+    /// A course with an existing "Quiz 1", and an undated "Week 6, Thursday" candidate for it.
+    private func modelWithExistingQuiz(due: Date) throws -> (ModelContainer, SyllabusImportModel) {
+        let container = try ModelContainer(for: ModelContainer.schema, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+        let context = container.mainContext
+        let course = Course(name: "Psychology", color: .purple, sortIndex: 0)
+        context.insert(course)
+        let existing = Assignment(title: "Quiz 1", dueDate: due)
+        context.insert(existing)
+        existing.course = course
+
+        let model = SyllabusImportModel(course: course, calendar: Fixtures.calendar, referenceDate: Fixtures.today)
+        model.candidates = ImportCandidateBuilder.candidates(
+            from: [DetectedItem(title: "Quiz 1", kind: .quiz, dateText: "Week 6, Thursday")],
+            resolver: model.resolver,
+            existing: [ExistingAssignment(title: "Quiz 1", dueDate: due)]
+        )
+        return (container, model)
+    }
 }
 
 /// Regression tests for the review list using the model's clock and calendar (ac3abe2).

@@ -88,13 +88,19 @@ nonisolated enum ImportCandidateBuilder {
     }
 
     /// Re-resolves dates the person hasn't set by hand (after the semester start changes).
+    /// Inclusion only changes when an item gains or loses its date; otherwise the person's
+    /// check or uncheck stays. Duplicate flags depend on the date, so callers refresh them after.
     static func reresolve(_ candidates: inout [ImportCandidate], with resolver: SyllabusDateResolver) {
         for index in candidates.indices where !candidates[index].dateSetByUser {
             let hadDate = candidates[index].dueDate != nil
             resolve(&candidates[index], with: resolver)
-            // Items that just gained a date become importable.
-            if !hadDate, candidates[index].dueDate != nil {
+            let hasDate = candidates[index].dueDate != nil
+            if !hadDate, hasDate {
+                // Items that just gained a date become importable.
                 candidates[index].isIncluded = defaultInclusion(for: candidates[index])
+            } else if hadDate, !hasDate {
+                // Items that lost their date can't be saved, so they're no longer checked.
+                candidates[index].isIncluded = false
             }
         }
     }

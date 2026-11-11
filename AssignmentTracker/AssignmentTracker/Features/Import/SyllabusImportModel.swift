@@ -20,9 +20,14 @@ final class SyllabusImportModel {
     var error: SyllabusImportError?
 
     var candidates: [ImportCandidate] = []
-    /// First day of classes; changing it re-places every "Week N" date.
+    /// First day of classes; changing it re-places every "Week N" date, then re-checks duplicates,
+    /// since an undated item matches on title alone and a dated one on title and day.
     var termStart: Date? {
-        didSet { if termStart != oldValue { ImportCandidateBuilder.reresolve(&candidates, with: resolver) } }
+        didSet {
+            guard termStart != oldValue else { return }
+            ImportCandidateBuilder.reresolve(&candidates, with: resolver)
+            refreshDuplicates()
+        }
     }
     var remindDayBefore = false
 

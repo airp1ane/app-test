@@ -60,6 +60,26 @@ struct ImportCandidateTests {
         #expect(candidates[0].isIncluded)
     }
 
+    @Test func losingADateUnchecksTheItem() {
+        var candidates = build([DetectedItem(title: "Quiz 1", kind: .quiz, dateText: "Week 6, Thursday")])
+        #expect(candidates[0].isIncluded)
+
+        let noTerm = SyllabusDateResolver(calendar: Fixtures.calendar, termStart: nil, referenceDate: Fixtures.today)
+        ImportCandidateBuilder.reresolve(&candidates, with: noTerm)
+        #expect(candidates[0].dueDate == nil)
+        #expect(!candidates[0].isIncluded)
+    }
+
+    @Test func reresolvingKeepsAManualUncheckWhileTheItemStaysDated() {
+        var candidates = build([DetectedItem(title: "Quiz 1", kind: .quiz, dateText: "Week 6, Thursday")])
+        candidates[0].isIncluded = false
+
+        let later = SyllabusDateResolver(calendar: Fixtures.calendar, termStart: Fixtures.date(2026, 9, 7), referenceDate: Fixtures.today)
+        ImportCandidateBuilder.reresolve(&candidates, with: later)
+        #expect(candidates[0].dueDate != nil)
+        #expect(!candidates[0].isIncluded)
+    }
+
     @Test func reresolvingKeepsDatesThePersonPicked() {
         var candidates = build([DetectedItem(title: "Quiz 1", kind: .quiz, dateText: "Week 6, Thursday")])
         let picked = Fixtures.date(2026, 10, 9, 12, 0)
