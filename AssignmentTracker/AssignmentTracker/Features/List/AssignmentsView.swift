@@ -56,6 +56,7 @@ struct AssignmentsView: View {
                     WeekHeroCard(summary: hero, onShowDay: onShowDay)
 
                     GlassSegmented(
+                        title: "Filter assignments",
                         options: Filter.allCases.map { ($0, $0.rawValue) },
                         selection: $filter
                     )

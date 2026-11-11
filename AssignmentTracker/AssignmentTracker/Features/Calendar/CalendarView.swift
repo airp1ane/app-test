@@ -38,7 +38,7 @@ struct CalendarView: View {
                         }
                     }
 
-                    GlassSegmented(options: Mode.allCases.map { ($0, $0.rawValue) }, selection: $mode)
+                    GlassSegmented(title: "Calendar view", options: Mode.allCases.map { ($0, $0.rawValue) }, selection: $mode)
 
                     switch mode {
                     case .month:
