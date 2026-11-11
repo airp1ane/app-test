@@ -126,11 +126,13 @@ struct SyllabusImportSheet: View {
                 }
             }
             .fullScreenCover(isPresented: $isScanning) {
-                DocumentScanner { images in
+                DocumentScanner(onFinish: { images in
                     isScanning = false
                     guard !images.isEmpty else { return }
                     startImport { await model.importScan(images) }
-                }
+                }, onError: { error in
+                    model.error = .unreadable("The scanner failed. \(error.localizedDescription)")
+                })
                 .ignoresSafeArea()
             }
             .sheet(isPresented: $isAddingCourse) {
