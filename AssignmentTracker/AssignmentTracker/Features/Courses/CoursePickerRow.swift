@@ -5,13 +5,15 @@ struct CoursePickerRow: View {
     let assignment: Assignment
     let courses: [Course]
 
+    @Environment(\.currentTime) private var now
+
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(assignment.title)
                     .font(.body.weight(.semibold))
                     .lineLimit(2)
-                Text(assignment.dueDate.dueRowLabel())
+                Text(assignment.dueDate.dueRowLabel(now: now))
                     .font(.subheadline)
                     .foregroundStyle(Palette.secondaryText)
             }

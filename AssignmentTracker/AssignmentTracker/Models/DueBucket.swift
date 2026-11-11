@@ -63,6 +63,18 @@ nonisolated extension Calendar {
         dateInterval(of: component, for: date)?.start ?? startOfDay(for: date)
     }
 
+    /// Whether `date` falls on the calendar day before `reference`'s day.
+    func isDayBefore(_ date: Date, relativeTo reference: Date) -> Bool {
+        guard let day = self.date(byAdding: .day, value: -1, to: reference) else { return false }
+        return isDate(date, inSameDayAs: day)
+    }
+
+    /// Whether `date` falls on the calendar day after `reference`'s day.
+    func isDayAfter(_ date: Date, relativeTo reference: Date) -> Bool {
+        guard let day = self.date(byAdding: .day, value: 1, to: reference) else { return false }
+        return isDate(date, inSameDayAs: day)
+    }
+
     /// How many days the month containing `date` has.
     func daysInMonth(of date: Date) -> Int {
         range(of: .day, in: .month, for: date)?.count ?? 30
@@ -74,7 +86,7 @@ nonisolated extension Date {
     func dueRowLabel(now: Date = .now, calendar: Calendar = .current) -> String {
         let time = formatted(date: .omitted, time: .shortened)
         if calendar.isDate(self, inSameDayAs: now) { return time }
-        if calendar.isDateInYesterday(self) { return "Yesterday, \(time)" }
+        if calendar.isDayBefore(self, relativeTo: now) { return "Yesterday, \(time)" }
         if WeekWindow(now: now, calendar: calendar).contains(self) {
             return "\(formatted(.dateTime.weekday(.abbreviated))), \(time)"
         }
@@ -86,10 +98,10 @@ nonisolated extension Date {
     }
 
     /// Day label for the detail screen: "Today", "Tomorrow", "Thu, Oct 1".
-    func dueDayLabel(calendar: Calendar = .current) -> String {
-        if calendar.isDateInToday(self) { return "Today" }
-        if calendar.isDateInTomorrow(self) { return "Tomorrow" }
-        if calendar.isDateInYesterday(self) { return "Yesterday" }
+    func dueDayLabel(now: Date = .now, calendar: Calendar = .current) -> String {
+        if calendar.isDate(self, inSameDayAs: now) { return "Today" }
+        if calendar.isDayAfter(self, relativeTo: now) { return "Tomorrow" }
+        if calendar.isDayBefore(self, relativeTo: now) { return "Yesterday" }
         return formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
     }
 }
@@ -97,8 +109,8 @@ nonisolated extension Date {
 nonisolated extension Date {
     /// "Today", "Tomorrow", "Thu", or "Oct 12" for a planned work day.
     func plannedLabel(now: Date = .now, calendar: Calendar = .current) -> String {
-        if calendar.isDateInToday(self) { return "Today" }
-        if calendar.isDateInTomorrow(self) { return "Tomorrow" }
+        if calendar.isDate(self, inSameDayAs: now) { return "Today" }
+        if calendar.isDayAfter(self, relativeTo: now) { return "Tomorrow" }
         if WeekWindow(now: now, calendar: calendar).contains(self) {
             return formatted(.dateTime.weekday(.abbreviated))
         }

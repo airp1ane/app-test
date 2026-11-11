@@ -11,7 +11,7 @@ struct AssignmentDetailHeader: View {
     }
 
     private var dueText: String {
-        "\(assignment.dueDate.dueDayLabel()), \(assignment.dueDate.formatted(date: .omitted, time: .shortened))"
+        "\(assignment.dueDate.dueDayLabel(now: now)), \(assignment.dueDate.formatted(date: .omitted, time: .shortened))"
     }
 
     var body: some View {

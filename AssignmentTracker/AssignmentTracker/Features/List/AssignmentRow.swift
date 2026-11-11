@@ -53,7 +53,7 @@ struct AssignmentRow: View {
                         if let planned = assignment.plannedDate, !assignment.isCompleted, tag == nil {
                             AppIcon(.plan, size: 14)
                                 .foregroundStyle(Palette.accentText)
-                                .accessibilityLabel("Planned for \(planned.plannedLabel())")
+                                .accessibilityLabel("Planned for \(planned.plannedLabel(now: now))")
                         }
                         if let tag {
                             Text(tag)
