@@ -64,7 +64,11 @@ nonisolated struct ExtractedSyllabus: Sendable {
 /// for plain text and RTF.
 nonisolated struct SyllabusTextExtractor {
     static let maxFileSize: Int64 = 20_000_000
-    static let docxType = UTType("org.openxmlformats.wordprocessingml.document") ?? .data
+    /// Never falls back to `.data`, which every file conforms to and would make the docx type
+    /// (and `supportedTypes`) accept anything.
+    static let docxType = UTType("org.openxmlformats.wordprocessingml.document")
+        ?? UTType(filenameExtension: "docx")
+        ?? UTType(importedAs: "org.openxmlformats.wordprocessingml.document")
     static let supportedTypes: [UTType] = [.pdf, docxType, .plainText, .rtf, .image]
 
     /// Below this many characters a PDF page is treated as scanned and sent to OCR.
@@ -91,7 +95,8 @@ nonisolated struct SyllabusTextExtractor {
 
         let data: Data
         do {
-            data = try Data(contentsOf: url)
+            // Mapped so a file of unknown size isn't copied into memory before the size check below.
+            data = try Data(contentsOf: url, options: .mappedIfSafe)
         } catch {
             throw SyllabusImportError.unreadable(error.localizedDescription)
         }
@@ -120,7 +125,7 @@ nonisolated struct SyllabusTextExtractor {
             else { throw SyllabusImportError.unreadable("The RTF file is damaged.") }
             result = ExtractedSyllabus(text: string, sourceName: name, fingerprint: "", pageCount: 1, recognizedPageCount: 0)
         } else if type.conforms(to: .plainText) {
-            let string = String(data: data, encoding: .utf8) ?? String(data: data, encoding: .isoLatin1) ?? ""
+            let string = Self.decodePlainText(data)
             result = ExtractedSyllabus(text: string, sourceName: name, fingerprint: "", pageCount: 1, recognizedPageCount: 0)
         } else if type.conforms(to: .image) {
             guard let image = Self.cgImage(from: data) else { throw SyllabusImportError.unreadable("The image is damaged.") }
@@ -134,6 +139,21 @@ nonisolated struct SyllabusTextExtractor {
             throw SyllabusImportError.noTextFound
         }
         return result
+    }
+
+    /// UTF-8 first, then UTF-16 when the file starts with a byte-order mark, then Latin-1
+    /// (which accepts any bytes). A leading byte-order mark is dropped.
+    static func decodePlainText(_ data: Data) -> String {
+        let string: String
+        if let utf8 = String(data: data, encoding: .utf8) {
+            string = utf8
+        } else if data.starts(with: [0xFF, 0xFE]) || data.starts(with: [0xFE, 0xFF]),
+                  let utf16 = String(data: data, encoding: .utf16) {
+            string = utf16
+        } else {
+            string = String(data: data, encoding: .isoLatin1) ?? ""
+        }
+        return string.hasPrefix("\u{FEFF}") ? String(string.dropFirst()) : string
     }
 
     /// Photo-library files, decoded here so large HEICs aren't decoded on the main actor.

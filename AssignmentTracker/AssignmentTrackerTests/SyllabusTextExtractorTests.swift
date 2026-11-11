@@ -47,6 +47,14 @@ struct SyllabusTextExtractorTests {
         #expect(result.text == text)
     }
 
+    @Test func readsUTF16PlainText() async throws {
+        let text = "HIST 480 Seminar\nBook review essay — 25%\nFinal research paper — 40%\n"
+        var data = Data([0xFF, 0xFE])
+        data.append(text.data(using: .utf16LittleEndian)!)
+        let result = try await extractor.extract(data: data, type: .plainText, name: "seminar.txt")
+        #expect(result.text == text)
+    }
+
     @Test func rejectsBrokenPDF() async throws {
         await #expect(throws: SyllabusImportError.unreadable("It may be damaged or not really a PDF.")) {
             try await extractor.extract(data: fixture("Broken_Syllabus.pdf"), type: .pdf, name: "broken.pdf")
