@@ -94,8 +94,8 @@ nonisolated struct SyllabusDateResolver {
 
         let time = parseTime(in: text)
         var reviewReasons: [String] = []
-        if time == nil, firstMatch(of: Self.timeRange, in: text) != nil {
-            // e.g. "2–4pm" – keep the default time but point it out.
+        if firstMatch(of: Self.timeRange, in: text) != nil {
+            // e.g. "2–4pm" – the end of the range is used as the due time; point it out.
             reviewReasons.append("Time range in syllabus")
         }
 

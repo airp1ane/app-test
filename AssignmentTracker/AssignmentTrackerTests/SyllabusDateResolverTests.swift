@@ -107,6 +107,13 @@ struct SyllabusDateResolverTests {
         #expect(result.status == .needsReview("Syllabus says Tuesday but that date is a Monday"))
     }
 
+    @Test func timeRangeIsFlaggedAndUsesRangeEnd() {
+        // Oct 12, 2026 is a Monday. "2-4pm" resolves to the end of the range and is flagged.
+        let result = resolver.resolve("Mon, Oct 12, 2-4pm")
+        #expect(result.date == Fixtures.date(2026, 10, 12, 16, 0))
+        #expect(result.status == .needsReview("Time range in syllabus"))
+    }
+
     // MARK: Relative weeks
 
     @Test(arguments: [
