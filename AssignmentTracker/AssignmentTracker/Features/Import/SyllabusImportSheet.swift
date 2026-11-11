@@ -104,8 +104,23 @@ struct SyllabusImportSheet: View {
                 startImport {
                     model.prepareForPhotos(count: items.count)
                     var photos: [Data] = []
+                    var failedCount = 0
                     for item in items {
-                        if let data = try? await item.loadTransferable(type: Data.self) { photos.append(data) }
+                        if let data = try? await item.loadTransferable(type: Data.self) {
+                            photos.append(data)
+                        } else {
+                            failedCount += 1
+                        }
+                    }
+                    // Some photos failing to load (for example an iCloud download) still lets the
+                    // rest through; only when none load is there nothing to import.
+                    guard !photos.isEmpty else {
+                        guard !Task.isCancelled else { return }
+                        model.error = .unreadable(failedCount == 1
+                            ? "The photo couldn’t be loaded. It may still be downloading from iCloud."
+                            : "None of the \(failedCount) photos could be loaded. They may still be downloading from iCloud.")
+                        model.phase = .choosingSource
+                        return
                     }
                     await model.importPhotos(photos)
                 }
