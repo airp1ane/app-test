@@ -15,8 +15,8 @@ struct FlowLayout: Layout {
         var y = bounds.minY
         for row in rows(for: subviews, maxWidth: bounds.width) {
             var x = bounds.minX
-            for index in row.indices {
-                let size = subviews[index].sizeThatFits(.unspecified)
+            for (position, index) in row.indices.enumerated() {
+                let size = row.sizes[position]
                 subviews[index].place(
                     at: CGPoint(x: x, y: y + (row.height - size.height) / 2),
                     proposal: ProposedViewSize(size)
@@ -29,6 +29,8 @@ struct FlowLayout: Layout {
 
     private struct Row {
         var indices: [Int] = []
+        /// Each subview's size, parallel to `indices`, so placing doesn't measure again.
+        var sizes: [CGSize] = []
         var width: CGFloat = 0
         var height: CGFloat = 0
     }
@@ -36,8 +38,11 @@ struct FlowLayout: Layout {
     private func rows(for subviews: Subviews, maxWidth: CGFloat) -> [Row] {
         var rows: [Row] = []
         var current = Row()
+        // Offer each subview at most the container width so an overlong chip truncates.
+        let proposal = maxWidth.isFinite ? ProposedViewSize(width: maxWidth, height: nil) : .unspecified
         for index in subviews.indices {
-            let size = subviews[index].sizeThatFits(.unspecified)
+            var size = subviews[index].sizeThatFits(proposal)
+            if maxWidth.isFinite { size.width = min(size.width, maxWidth) }
             let proposedWidth = current.indices.isEmpty ? size.width : current.width + spacing + size.width
             if proposedWidth > maxWidth, !current.indices.isEmpty {
                 rows.append(current)
@@ -46,6 +51,7 @@ struct FlowLayout: Layout {
             current.width = current.indices.isEmpty ? size.width : current.width + spacing + size.width
             current.height = max(current.height, size.height)
             current.indices.append(index)
+            current.sizes.append(size)
         }
         if !current.indices.isEmpty { rows.append(current) }
         return rows
