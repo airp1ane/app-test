@@ -243,7 +243,8 @@ final class SyllabusImportModel {
         try? context.save()
         if remindDayBefore, !created.isEmpty {
             Task {
-                await ReminderScheduler.requestAuthorization()
+                // Without permission there's nothing to schedule; these are new, so none are pending.
+                guard await ReminderScheduler.requestAuthorization() else { return }
                 created.forEach { ReminderScheduler.sync($0) }
             }
         }

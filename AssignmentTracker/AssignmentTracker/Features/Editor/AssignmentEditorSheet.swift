@@ -137,8 +137,12 @@ struct AssignmentEditorSheet: View {
 
         if remindDayBefore {
             Task {
-                await ReminderScheduler.requestAuthorization()
-                ReminderScheduler.sync(target)
+                if await ReminderScheduler.requestAuthorization() {
+                    ReminderScheduler.sync(target)
+                } else {
+                    // Not allowed: don't schedule, but drop any reminder left from an earlier date.
+                    ReminderScheduler.cancel(target)
+                }
             }
         } else {
             ReminderScheduler.sync(target)
